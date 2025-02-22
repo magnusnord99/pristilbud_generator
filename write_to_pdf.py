@@ -6,6 +6,8 @@ import from_google  # Import your existing script
 import os
 import re
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 url = input("Type your Google Sheets URL: ")
 
 # Extract the Spreadsheet ID using regex
@@ -45,11 +47,12 @@ def sanitize_filename(name):
 clean_pdf_name = sanitize_filename(pdf_name)
 
 # Lag en full filbane med det dynamiske navnet
-output_pdf_no = f"/Users/magnusnordmo/Desktop/Pristilbud_{clean_pdf_name}_{details.get("Versjon", "N/A")}_@leafilms.pdf"
-output_pdf_en = f"/Users/magnusnordmo/Desktop/Price_offer_{clean_pdf_name}_{details.get("Versjon", "N/A")}_@leafilms.pdf"
+output_pdf_no = os.path.join(BASE_DIR, f"Pristilbud_{clean_pdf_name}_{details.get('Versjon', 'N/A')}_@leafilms.pdf")
+output_pdf_en = os.path.join(BASE_DIR, f"Price_offer_{clean_pdf_name}_{details.get('Versjon', 'N/A')}_@leafilms.pdf")
 
 
-logo_path = "/Users/magnusnordmo/Desktop/Pristilbud_generator/logo.png"
+
+logo_path = os.path.join(BASE_DIR, "logo.png")
 
 # Function to create a PDF similar to the template
 def write_to_pdf_en(data, filename):

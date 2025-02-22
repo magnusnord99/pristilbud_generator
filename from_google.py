@@ -1,10 +1,13 @@
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from collections import defaultdict
+import os
 
 # Scopes and credentials
 SCOPES = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
-SERVICE_ACCOUNT_FILE = "/Users/magnusnordmo/Desktop/Pristilbud_generator/credentials.json"
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+SERVICE_ACCOUNT_FILE = os.path.join(BASE_DIR, "credentials.json")
   # Your Google Sheets ID
 
 # Ranges for fetching data
