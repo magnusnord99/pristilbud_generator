@@ -46,9 +46,29 @@ def sanitize_filename(name):
 
 clean_pdf_name = sanitize_filename(pdf_name)
 
-# Lag en full filbane med det dynamiske navnet
-output_pdf_no = os.path.join(BASE_DIR, f"Pristilbud_{clean_pdf_name}_{details.get('Versjon', 'N/A')}_@leafilms.pdf")
-output_pdf_en = os.path.join(BASE_DIR, f"Price_offer_{clean_pdf_name}_{details.get('Versjon', 'N/A')}_@leafilms.pdf")
+
+# Get the path to the user's Desktop
+desktop_path = os.path.join(os.path.expanduser("~"), "Desktop")
+
+# Define the path to the "Pristilbud" folder on the Desktop
+pristilbud_folder = os.path.join(desktop_path, "Pristilbud")
+
+# Create the "Pristilbud" folder if it does not exist
+os.makedirs(pristilbud_folder, exist_ok=True)
+
+# Extract and sanitize the customer name for the subfolder
+kunde_name = details.get('Kunde', 'N/A').strip()
+clean_kunde_name = "".join(c if c.isalnum() or c in " _-" else "_" for c in kunde_name)  # Sanitize
+
+# Define the customer's folder inside "Pristilbud"
+kunde_folder = os.path.join(pristilbud_folder, clean_kunde_name)
+
+# Create the customer's folder if it does not exist
+os.makedirs(kunde_folder, exist_ok=True)
+
+# Define the output PDF file paths inside the customer's folder
+output_pdf_no = os.path.join(kunde_folder, f"Pristilbud_{clean_pdf_name}_{details.get('Versjon', 'N/A')}_@leafilms.pdf")
+output_pdf_en = os.path.join(kunde_folder, f"Price_offer_{clean_pdf_name}_{details.get('Versjon', 'N/A')}_@leafilms.pdf")
 
 
 
