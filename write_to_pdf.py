@@ -248,7 +248,7 @@ def write_to_pdf_en(data, filename):
 
 
 
-def write_to_pdf_no(data, filename):
+def write_to_pdf_no(data, filename, reise, mva):
     c = canvas.Canvas(filename, pagesize=A4)
     c.setFont("Helvetica", 11)
 
@@ -323,11 +323,30 @@ def write_to_pdf_no(data, filename):
         
 
         # Terms and Conditions text
-    terms_and_conditions_no = """\
+    terms_and_conditions_no_reise = """\
     Leafilms vil være ansvarlig for planleggingen, produksjonen og leveringen av prosjektet slik det er beskrevet i dette tilbudet.
     Prosjektets omfang, tidslinje og leveranser avtales før produksjonen starter. Eventuelle endringer i omfanget underveis kan 
     medføre ekstra kostnader. \n
     Reise-, overnattings- og oppholdsutgifter for teamet er inkludert i budsjettet med mindre annet er spesifisert. \n
+    Dersom uforutsette omstendigheter (f.eks. ekstremvær eller andre faktorer utenfor Leafilms’ kontroll) hindrer produksjonen 
+    i å gjennomføres som planlagt, vil alternative løsninger utarbeides i samråd med kunden. Eventuelle forsinkelser eller 
+    omlegginger kan medføre ekstra kostnader.\n
+    Kansellering innen 14 dager før startdato: 50 % av den avtalte prisen vil bli fakturert.
+    Kansellering innen 48 timer før startdato: 100 % av den avtalte prisen vil bli fakturert.\n
+    Leafilms beholder full opphavsrett til alt produsert materiale. Kunden gis bruksrettigheter for det avtalte formålet 
+    og prosjektet. Videre salg eller distribusjon er ikke tillatt uten skriftlig samtykke fra Leafilms.
+    Leafilms må krediteres i henhold til bransjestandarder der materialet brukes, der det er praktisk mulig.\n
+    Alt materiale, inkludert opptak og prosjektfiler, vil bli levert til kunden som avtalt. Lagring og arkivering av 
+    materialet utover leveringsdatoen er kundens ansvar.\n
+    Fakturaen deles opp i to like betalinger. Den første halvparten faktureres ved signering av produksjonsavtalen, 
+    og den andre halvparten faktureres etter siste produksjonsdag. Vær oppmerksom på at forsinkede betalinger kan medføre 
+    ekstra gebyrer."""
+
+    terms_and_conditions_no_ureise = """\
+    Leafilms vil være ansvarlig for planleggingen, produksjonen og leveringen av prosjektet slik det er beskrevet i dette tilbudet.
+    Prosjektets omfang, tidslinje og leveranser avtales før produksjonen starter. Eventuelle endringer i omfanget underveis kan 
+    medføre ekstra kostnader. \n
+    Reise-, overnattings- og oppholdsutgifter for teamet er ikke inkludert i budsjettet med mindre annet er spesifisert. \n
     Dersom uforutsette omstendigheter (f.eks. ekstremvær eller andre faktorer utenfor Leafilms’ kontroll) hindrer produksjonen 
     i å gjennomføres som planlagt, vil alternative løsninger utarbeides i samråd med kunden. Eventuelle forsinkelser eller 
     omlegginger kan medføre ekstra kostnader.\n
@@ -352,7 +371,12 @@ def write_to_pdf_no(data, filename):
 
     # Draw terms and conditions
     c.setFont("Helvetica", 9)
-    lines = terms_and_conditions_no.splitlines()  # Split the text into lines
+    if reise == "y":
+        lines = terms_and_conditions_no_reise.splitlines()   # Split the text into lines
+    elif reise == "n":
+        lines = terms_and_conditions_no_ureise.splitlines()  # Split the text into lines
+    else:
+        print("ingen gyldig verdi")
  
     for paragraph in lines:
         wrapped_text = simpleSplit(paragraph.strip(), "Helvetica", 9, max_width)  # Wrap text
@@ -405,6 +429,12 @@ def write_to_pdf_no(data, filename):
         c.drawString(50, y_position, "Produksjon totalt eksl. mva:")
         c.drawRightString(472, y_position, f"{total_excl_mva:,.2f} NOK")  # Align right
         y_position -= 15
+    
+
+    if total_excl_mva is not None and mva == "y":
+        c.drawString(50, y_position, "Produksjon totalt eksl. mva:")
+        c.drawRightString(472, y_position, f"{total_excl_mva:,.2f} NOK")  # Align right
+        y_position -= 15
         
 
     # Save the PDF
@@ -426,6 +456,8 @@ def write_to_pdf_no(data, filename):
 # Generate the PDF
 spraak = input("Enter language (NO/EN):")
 if spraak == 'NO':
-    write_to_pdf_no(data, output_pdf_no)  # Split the text into lines
+    reise = input("reise inkludert? (Y/N): ").lower()
+    mva = input("inkludert mva? (Y/N): ").lower()
+    write_to_pdf_no(data, output_pdf_no, reise, mva)  # Split the text into lines
 elif spraak == 'EN':
     write_to_pdf_en(data, output_pdf_en)

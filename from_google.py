@@ -93,9 +93,9 @@ def fetch_google_data(SPREADSHEET_ID):
 
         return {
             "grouped_sums": grouped_sums_list,
-            "total_days": int(days_value) if days_value and days_value.isdigit() else None,
-            "post_prod_days": int(post_prod_days) if post_prod_days and post_prod_days.isdigit() else None,
-            "pre_prod_days": int(pre_prod_days) if pre_prod_days and pre_prod_days.isdigit() else None,
+            "total_days": int(float(days_value.replace(",", "."))) if days_value and float(days_value.replace(",", ".")).is_integer() else float(days_value.replace(",", ".")) if days_value else None,
+            "post_prod_days": int(float(post_prod_days.replace(",", "."))) if post_prod_days and float(post_prod_days.replace(",", ".")).is_integer() else float(post_prod_days.replace(",", ".")) if post_prod_days else None,
+            "pre_prod_days": int(float(pre_prod_days.replace(",", "."))) if pre_prod_days and float(pre_prod_days.replace(",", ".")).is_integer() else float(pre_prod_days.replace(",", ".")) if pre_prod_days else None,
             "details": details,
             "company_info": company_info,
             "total_excl_mva": total_excl_mva,
