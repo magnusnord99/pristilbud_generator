@@ -405,9 +405,6 @@ def write_to_pdf_no(data, filename):
         c.drawString(50, y_position, "Produksjon totalt eksl. mva:")
         c.drawRightString(472, y_position, f"{total_excl_mva:,.2f} NOK")  # Align right
         y_position -= 15
-    if total_incl_mva is not None:
-        c.drawString(50, y_position, "Produksjon totalt inkl. mva:")
-        c.drawRightString(472, y_position, f"{total_incl_mva:,.2f} NOK")  # Align right
         
 
     # Save the PDF
