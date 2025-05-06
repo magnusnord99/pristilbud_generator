@@ -152,11 +152,30 @@ def write_to_pdf_en(data, filename):
     y_position -= 10 
 
         # Terms and Conditions text
-    terms_and_conditions_en = """\
+    terms_and_conditions_en_travel = """\
     Leafilms will be responsible for the overall planning, production, and delivery of the project as outlined in this offer.
     The project scope, timeline, and deliverables will be agreed upon before production begins. Any changes to the
     scope during the project may incur additional costs and require a written agreement. \n
     Travel, accommodation, and subsistence costs for the crew are included in the budget unless otherwise specified. \n
+    If unforeseen circumstances (e.g., severe weather or other factors beyond Leafilms’ control) prevent production
+    from proceeding as planned, alternative arrangements will be made in consultation with the client. Any delays or
+    rescheduling may incur additional costs.\n
+    Cancellation within 14 days before the start date: 50% of the agreed price will be invoiced.
+    Cancellation within 48 hours before the start date: 100% of the agreed price will be invoiced.\n
+    Leafilms retains full copyright to all materials produced. The client is granted usage rights for the agreed purpose
+    and project. Resale or redistribution is not permitted without prior written consent from Leafilms.
+    Leafilms must be credited in accordance with industry standards wherever the material is used, where practical.\n
+    All materials, including footage and project files, will be delivered to the client as agreed. Storage and archiving of
+    the material beyond the delivery date are the responsibility of the client.\n
+    The invoice is split into two equal payments. The first half will be issued upon signing the production agreement,
+    and the second half will be issued after the final production day. Please be aware that late payments may incur
+    additional fees."""
+
+    terms_and_conditions_en_oTravel = """\
+    Leafilms will be responsible for the overall planning, production, and delivery of the project as outlined in this offer.
+    The project scope, timeline, and deliverables will be agreed upon before production begins. Any changes to the
+    scope during the project may incur additional costs and require a written agreement. \n
+    Travel, accommodation, and subsistence costs for the crew are not included in the budget unless otherwise specified. \n
     If unforeseen circumstances (e.g., severe weather or other factors beyond Leafilms’ control) prevent production
     from proceeding as planned, alternative arrangements will be made in consultation with the client. Any delays or
     rescheduling may incur additional costs.\n
@@ -181,7 +200,12 @@ def write_to_pdf_en(data, filename):
 
     # Draw terms and conditions
     c.setFont("Helvetica", 10)
-    lines = terms_and_conditions_en.splitlines()  # Split the text into lines
+    if reise == "y":
+        lines = terms_and_conditions_en_travel.splitlines()   # Split the text into lines
+    elif reise == "n":
+        lines = terms_and_conditions_en_oTravel.splitlines()  # Split the text into lines
+    else:
+        print("ingen gyldig verdi")
  
     for paragraph in lines:
         wrapped_text = simpleSplit(paragraph.strip(), "Helvetica", 9, max_width)  # Wrap text
@@ -460,4 +484,6 @@ if spraak == 'NO':
     mva = input("inkludert mva? (Y/N): ").lower()
     write_to_pdf_no(data, output_pdf_no, reise, mva)  # Split the text into lines
 elif spraak == 'EN':
+    reise = input("reise inkludert? (Y/N): ").lower()
     write_to_pdf_en(data, output_pdf_en)
+    
