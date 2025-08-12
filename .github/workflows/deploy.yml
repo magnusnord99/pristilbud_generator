@@ -36,7 +36,11 @@ jobs:
       - name: Build backend image (Cloud Build)
         working-directory: backend
         run: |
-          gcloud builds submit --tag gcr.io/${GCP_PROJECT_ID}/pristilbud-backend --quiet
+          BUILD_ID=$(gcloud builds submit --tag gcr.io/${GCP_PROJECT_ID}/pristilbud-backend --async --format='value(id)')
+          echo "Backend build ID: $BUILD_ID"
+          echo "Waiting for backend build to complete..."
+          gcloud builds log --stream $BUILD_ID || echo "Log streaming failed, checking build status..."
+          gcloud builds describe $BUILD_ID --format='value(status)' | grep -q "SUCCESS" || (echo "Backend build failed" && exit 1)
 
       - name: Create backend env file for Cloud Run
         working-directory: backend
@@ -62,10 +66,14 @@ jobs:
       - name: Build frontend image (Cloud Build) with backend URL
         working-directory: frontend
         run: |
-          gcloud builds submit \
+          BUILD_ID=$(gcloud builds submit \
             --config cloudbuild.yaml \
             --substitutions _VITE_BACKEND_URL=${{ steps.backend.outputs.url }} \
-            --quiet
+            --async --format='value(id)')
+          echo "Frontend build ID: $BUILD_ID"
+          echo "Waiting for frontend build to complete..."
+          gcloud builds log --stream $BUILD_ID || echo "Log streaming failed, checking build status..."
+          gcloud builds describe $BUILD_ID --format='value(status)' | grep -q "SUCCESS" || (echo "Frontend build failed" && exit 1)
 
       - name: Deploy frontend to Cloud Run
         working-directory: frontend
