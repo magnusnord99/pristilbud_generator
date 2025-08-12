@@ -1,6 +1,7 @@
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from collections import defaultdict
+from functools import lru_cache
 import os
 
 # Scopes and credentials
@@ -8,7 +9,6 @@ SCOPES = ["https://www.googleapis.com/auth/spreadsheets.readonly"]
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 SERVICE_ACCOUNT_FILE = os.path.join(BASE_DIR, "credentials.json")
-  # Your Google Sheets ID
 
 # Ranges for fetching data
 DETAILS_RANGE = "Kundeinfo!A:B"  # Assuming the new page is named 'Details'
@@ -16,15 +16,38 @@ SUMS_RANGE = "A:C"  # For grouped sums
 DAYS_CELL = "H21"  # Cell for "Antall dager valgt"
 
 
-# Authenticate
-credentials = service_account.Credentials.from_service_account_file(
-    SERVICE_ACCOUNT_FILE, scopes=SCOPES
-)
-service = build("sheets", "v4", credentials=credentials)
+@lru_cache(maxsize=1)
+def get_sheets_service():
+    """Lazily build and cache the Google Sheets service.
+
+    Looks for credentials in the following order:
+    - GOOGLE_APPLICATION_CREDENTIALS env var (path to JSON file)
+    - backend/credentials.json next to this file
+    """
+    # Prefer explicit env var if provided
+    creds_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+    if creds_path and os.path.isfile(creds_path):
+        credentials_obj = service_account.Credentials.from_service_account_file(
+            creds_path, scopes=SCOPES
+        )
+        return build("sheets", "v4", credentials=credentials_obj)
+
+    # Fallback to local credentials.json
+    if os.path.isfile(SERVICE_ACCOUNT_FILE):
+        credentials_obj = service_account.Credentials.from_service_account_file(
+            SERVICE_ACCOUNT_FILE, scopes=SCOPES
+        )
+        return build("sheets", "v4", credentials=credentials_obj)
+
+    raise FileNotFoundError(
+        "Google service account credentials not found. Set GOOGLE_APPLICATION_CREDENTIALS "
+        "to a valid file path or place credentials.json in the backend directory."
+    )
 
 # Function to fetch data
 def fetch_google_data(SPREADSHEET_ID):
     try:
+        service = get_sheets_service()
         sheet = service.spreadsheets()
 
         # Fetch grouped sums data (A:C)
@@ -103,5 +126,5 @@ def fetch_google_data(SPREADSHEET_ID):
         }
 
     except Exception as e:
-        print(f"Failed to access the spreadsheet: {e}")
-        return None
+        # Let callers decide how to handle upstream errors
+        raise
