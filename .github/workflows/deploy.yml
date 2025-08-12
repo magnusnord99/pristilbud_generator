@@ -28,11 +28,21 @@ jobs:
         with:
           project_id: ${{ env.GCP_PROJECT_ID }}
 
+      - name: Create custom Cloud Build bucket
+        run: |
+          BUCKET_NAME="${GCP_PROJECT_ID}-custom-builds"
+          gsutil ls -b gs://${BUCKET_NAME} || gsutil mb gs://${BUCKET_NAME}
+          echo "Using custom bucket: gs://${BUCKET_NAME}"
+
       - name: Build backend image (Cloud Build)
         working-directory: backend
         run: |
           echo "Starting backend build..."
-          gcloud builds submit --tag gcr.io/${GCP_PROJECT_ID}/pristilbud-backend --timeout=1800s
+          BUCKET_NAME="${GCP_PROJECT_ID}-custom-builds"
+          gcloud builds submit \
+            --tag gcr.io/${GCP_PROJECT_ID}/pristilbud-backend \
+            --gcs-log-dir gs://${BUCKET_NAME}/logs \
+            --gcs-source-staging-dir gs://${BUCKET_NAME}/source
 
       - name: Create backend env file for Cloud Run
         working-directory: backend
@@ -59,10 +69,12 @@ jobs:
         working-directory: frontend
         run: |
           echo "Starting frontend build..."
+          BUCKET_NAME="${GCP_PROJECT_ID}-custom-builds"
           gcloud builds submit \
             --config cloudbuild.yaml \
             --substitutions _VITE_BACKEND_URL=${{ steps.backend.outputs.url }} \
-            --timeout=1800s
+            --gcs-log-dir gs://${BUCKET_NAME}/logs \
+            --gcs-source-staging-dir gs://${BUCKET_NAME}/source
 
       - name: Deploy frontend to Cloud Run
         working-directory: frontend
