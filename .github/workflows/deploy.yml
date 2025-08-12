@@ -29,8 +29,9 @@ jobs:
           project_id: ${{ env.GCP_PROJECT_ID }}
 
       - name: Enable required services (idempotent)
+        continue-on-error: true
         run: |
-          gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com
+          gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com || true
 
       - name: Build backend image (Cloud Build)
         working-directory: backend
