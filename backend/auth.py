@@ -8,6 +8,10 @@ from jose import JWTError, jwt
 from google.oauth2 import id_token
 from google.auth.transport import requests
 import database
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Configuration
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "your-secret-key-change-in-production")

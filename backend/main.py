@@ -172,6 +172,101 @@ def create_pdf(
         headers={"Content-Disposition": f'attachment; filename="{filename}"'}
     )
 
+# Test endpoint for creating first user (remove in production)
+@app.post("/test/create-first-user")
+async def create_first_user():
+    """Create the first user for testing (remove in production)"""
+    try:
+        # Check if any users exist
+        if not database.is_first_user():
+            raise HTTPException(status_code=400, detail="Users already exist")
+        
+        # Create a test user (first user becomes admin)
+        user_id = database.create_user(
+            google_id="test-google-id-123",
+            email="admin@test.com",
+            name="Test Admin",
+            is_first_user=True
+        )
+        
+        user = database.get_user_by_id(user_id)
+        
+        # Create tokens for this user
+        tokens = auth.create_user_tokens(user)
+        
+        return {
+            "message": "First user created successfully",
+            "user": user,
+            "tokens": tokens
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+# Test endpoint for creating invitations (remove in production)
+@app.post("/test/create-invitation")
+async def create_test_invitation():
+    """Create a test invitation (remove in production)"""
+    try:
+        # Check if any users exist
+        if database.is_first_user():
+            raise HTTPException(status_code=400, detail="No users exist yet")
+        
+        # Get the first user (admin)
+        users = database.get_all_users()
+        if not users:
+            raise HTTPException(status_code=400, detail="No users found")
+        
+        admin_user = users[0]  # First user is admin
+        
+        # Create invitation
+        invitation_code = auth.generate_invitation_code()
+        invitation_id = database.create_invitation(
+            invitation_code, 
+            "test@example.com", 
+            admin_user["id"]
+        )
+        
+        invitation = database.get_invitation_by_code(invitation_code)
+        
+        return {
+            "message": "Test invitation created successfully",
+            "invitation": {
+                "code": invitation["code"],
+                "email": invitation["email"]
+            }
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+# Test endpoint for authentication without Google OAuth (remove in production)
+@app.post("/test/auth")
+async def test_auth():
+    """Test authentication without Google OAuth (remove in production)"""
+    try:
+        # Check if any users exist
+        if database.is_first_user():
+            raise HTTPException(status_code=400, detail="No users exist yet")
+        
+        # Get the first user (admin)
+        users = database.get_all_users()
+        if not users:
+            raise HTTPException(status_code=400, detail="No users found")
+        
+        user = users[0]  # First user is admin
+        
+        # Create tokens for this user
+        tokens = auth.create_user_tokens(user)
+        
+        return {
+            "message": "Test authentication successful",
+            "access_token": tokens["access_token"],
+            "refresh_token": tokens["refresh_token"],
+            "token_type": tokens["token_type"],
+            "user": user
+        }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
 # Root endpoint (shows login form)
 @app.get("/", response_class=HTMLResponse)
 async def root():
