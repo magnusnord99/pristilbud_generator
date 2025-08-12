@@ -5,9 +5,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 # Runtime libs that Pillow/ReportLab may use
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libjpeg62-turbo \
-    zlib1g \
-    libfreetype6 \
+    build-essential \
+    pkg-config \
+    libjpeg62-turbo-dev \
+    zlib1g-dev \
+    libfreetype6-dev \
+    libpng-dev \
   && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
