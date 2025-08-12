@@ -52,55 +52,168 @@ export default function OfferPage() {
   }
 
   return (
-    <div>
-      <h1>Pristilbud</h1>
-      <p>Lim inn Google Sheets-URL og velg alternativer for å generere PDF.</p>
+    <div style={{
+      maxWidth: '800px',
+      margin: '0 auto',
+      padding: '20px',
+      minHeight: '600px'
+    }}>
+      <div style={{
+        backgroundColor: 'white',
+        borderRadius: '16px',
+        padding: '32px',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
+        border: '1px solid #e1e5e9',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column'
+      }}>
+        <div style={{ flex: '1' }}>
+          <h1 style={{
+            margin: '0 0 20px 0',
+            color: '#2c3e50',
+            fontSize: '2rem',
+            fontWeight: '600'
+          }}>Pristilbud</h1>
+          <p style={{
+            margin: '0 0 24px 0',
+            color: '#5a6c7d',
+            fontSize: '1.1rem',
+            lineHeight: '1.6'
+          }}>Lim inn Google Sheets-URL og velg alternativer for å generere PDF.</p>
 
-      <form onSubmit={handleSubmit} style={{ display: 'grid', gap: 16 }}>
-        <label>
-          <div>Google Sheets URL</div>
-          <input
-            type="url"
-            placeholder="https://docs.google.com/spreadsheets/d/..."
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            required
-            style={{ width: '100%', padding: 10 }}
-          />
-        </label>
+          <form onSubmit={handleSubmit} style={{ 
+            display: 'grid', 
+            gap: '20px',
+            marginBottom: '20px'
+          }}>
+            <label style={{ display: 'grid', gap: '8px' }}>
+              <div style={{ 
+                fontWeight: '500', 
+                color: '#2c3e50',
+                fontSize: '1rem'
+              }}>Google Sheets URL</div>
+              <input
+                type="url"
+                placeholder="https://docs.google.com/spreadsheets/d/..."
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                required
+                style={{ 
+                  width: '100%', 
+                  padding: '12px',
+                  borderRadius: '8px',
+                  border: '1px solid #d1d5db',
+                  fontSize: '1rem',
+                  outline: 'none',
+                  transition: 'border-color 0.2s'
+                }}
+              />
+            </label>
 
-        <label>
-          <div>Språk</div>
-          <select value={language} onChange={(e) => setLanguage(e.target.value as Language)}>
-            <option value="NO">Norsk</option>
-            <option value="EN">English</option>
-          </select>
-        </label>
+            <label style={{ display: 'grid', gap: '8px' }}>
+              <div style={{ 
+                fontWeight: '500', 
+                color: '#2c3e50',
+                fontSize: '1rem'
+              }}>Språk</div>
+              <select 
+                value={language} 
+                onChange={(e) => setLanguage(e.target.value as Language)}
+                style={{
+                  padding: '12px',
+                  borderRadius: '8px',
+                  border: '1px solid #d1d5db',
+                  fontSize: '1rem',
+                  outline: 'none',
+                  transition: 'border-color 0.2s'
+                }}
+              >
+                <option value="NO">Norsk</option>
+                <option value="EN">English</option>
+              </select>
+            </label>
 
-        <label>
-          <div>Inkluder reise</div>
-          <select value={reise} onChange={(e) => setReise(e.target.value as YesNo)}>
-            <option value="y">Ja</option>
-            <option value="n">Nei</option>
-          </select>
-        </label>
+            <label style={{ display: 'grid', gap: '8px' }}>
+              <div style={{ 
+                fontWeight: '500', 
+                color: '#2c3e50',
+                fontSize: '1rem'
+              }}>Inkluder reise</div>
+              <select 
+                value={reise} 
+                onChange={(e) => setReise(e.target.value as YesNo)}
+                style={{
+                  padding: '12px',
+                  borderRadius: '8px',
+                  border: '1px solid #d1d5db',
+                  fontSize: '1rem',
+                  outline: 'none',
+                  transition: 'border-color 0.2s'
+                }}
+              >
+                <option value="y">Ja</option>
+                <option value="n">Nei</option>
+              </select>
+            </label>
 
-        <label>
-          <div>Inkluder MVA</div>
-          <select value={mva} onChange={(e) => setMva(e.target.value as YesNo)}>
-            <option value="y">Ja</option>
-            <option value="n">Nei</option>
-          </select>
-        </label>
+            <label style={{ display: 'grid', gap: '8px' }}>
+              <div style={{ 
+                fontWeight: '500', 
+                color: '#2c3e50',
+                fontSize: '1rem'
+              }}>Inkluder MVA</div>
+              <select 
+                value={mva} 
+                onChange={(e) => setMva(e.target.value as YesNo)}
+                style={{
+                  padding: '12px',
+                  borderRadius: '8px',
+                  border: '1px solid #d1d5db',
+                  fontSize: '1rem',
+                  outline: 'none',
+                  transition: 'border-color 0.2s'
+                }}
+              >
+                <option value="y">Ja</option>
+                <option value="n">Nei</option>
+              </select>
+            </label>
 
-        <button type="submit" disabled={loading || !isValid}>
-          {loading ? 'Genererer…' : 'Generer PDF'}
-        </button>
-      </form>
+            <button 
+              type="submit" 
+              disabled={loading || !isValid}
+              style={{
+                padding: '14px 24px',
+                backgroundColor: loading || !isValid ? '#9ca3af' : '#3b82f6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '1rem',
+                fontWeight: '500',
+                cursor: loading || !isValid ? 'not-allowed' : 'pointer',
+                transition: 'background-color 0.2s',
+                marginTop: '8px'
+              }}
+            >
+              {loading ? 'Genererer…' : 'Generer PDF'}
+            </button>
+          </form>
 
-      {error && (
-        <p style={{ color: 'crimson' }}>Feil: {error}</p>
-      )}
+          {error && (
+            <div style={{
+              padding: '16px',
+              backgroundColor: '#fef2f2',
+              border: '1px solid #fecaca',
+              borderRadius: '8px',
+              color: '#dc2626',
+              fontSize: '0.95rem'
+            }}>
+              Feil: {error}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
