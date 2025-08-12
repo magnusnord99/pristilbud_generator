@@ -36,7 +36,7 @@ jobs:
       - name: Build backend image (Cloud Build)
         working-directory: backend
         run: |
-          gcloud builds submit --tag gcr.io/${GCP_PROJECT_ID}/pristilbud-backend
+          gcloud builds submit --tag gcr.io/${GCP_PROJECT_ID}/pristilbud-backend --quiet
 
       - name: Create backend env file for Cloud Run
         working-directory: backend
@@ -64,7 +64,8 @@ jobs:
         run: |
           gcloud builds submit \
             --config cloudbuild.yaml \
-            --substitutions _VITE_BACKEND_URL=${{ steps.backend.outputs.url }}
+            --substitutions _VITE_BACKEND_URL=${{ steps.backend.outputs.url }} \
+            --quiet
 
       - name: Deploy frontend to Cloud Run
         working-directory: frontend
