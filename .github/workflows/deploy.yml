@@ -28,19 +28,11 @@ jobs:
         with:
           project_id: ${{ env.GCP_PROJECT_ID }}
 
-      - name: Enable required services (idempotent)
-        continue-on-error: true
-        run: |
-          gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregistry.googleapis.com || true
-
       - name: Build backend image (Cloud Build)
         working-directory: backend
         run: |
-          BUILD_ID=$(gcloud builds submit --tag gcr.io/${GCP_PROJECT_ID}/pristilbud-backend --async --format='value(id)')
-          echo "Backend build ID: $BUILD_ID"
-          echo "Waiting for backend build to complete..."
-          gcloud builds log --stream $BUILD_ID || echo "Log streaming failed, checking build status..."
-          gcloud builds describe $BUILD_ID --format='value(status)' | grep -q "SUCCESS" || (echo "Backend build failed" && exit 1)
+          echo "Starting backend build..."
+          gcloud builds submit --tag gcr.io/${GCP_PROJECT_ID}/pristilbud-backend --timeout=1800s
 
       - name: Create backend env file for Cloud Run
         working-directory: backend
@@ -66,14 +58,11 @@ jobs:
       - name: Build frontend image (Cloud Build) with backend URL
         working-directory: frontend
         run: |
-          BUILD_ID=$(gcloud builds submit \
+          echo "Starting frontend build..."
+          gcloud builds submit \
             --config cloudbuild.yaml \
             --substitutions _VITE_BACKEND_URL=${{ steps.backend.outputs.url }} \
-            --async --format='value(id)')
-          echo "Frontend build ID: $BUILD_ID"
-          echo "Waiting for frontend build to complete..."
-          gcloud builds log --stream $BUILD_ID || echo "Log streaming failed, checking build status..."
-          gcloud builds describe $BUILD_ID --format='value(status)' | grep -q "SUCCESS" || (echo "Frontend build failed" && exit 1)
+            --timeout=1800s
 
       - name: Deploy frontend to Cloud Run
         working-directory: frontend
