@@ -2,6 +2,7 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from collections import defaultdict
 from functools import lru_cache
+import json
 import os
 
 # Scopes and credentials
@@ -25,6 +26,17 @@ def get_sheets_service():
     - backend/credentials.json next to this file
     """
     # Prefer explicit env var if provided
+    creds_json = os.environ.get("GOOGLE_CREDENTIALS_JSON")
+    if creds_json:
+        try:
+            info = json.loads(creds_json)
+            credentials_obj = service_account.Credentials.from_service_account_info(
+                info, scopes=SCOPES
+            )
+            return build("sheets", "v4", credentials=credentials_obj)
+        except Exception as exc:
+            raise RuntimeError("Invalid GOOGLE_CREDENTIALS_JSON content") from exc
+
     creds_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
     if creds_path and os.path.isfile(creds_path):
         credentials_obj = service_account.Credentials.from_service_account_file(

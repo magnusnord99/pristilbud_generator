@@ -22,7 +22,8 @@ export default function OfferPage() {
     }
     setLoading(true)
     try {
-      const res = await fetch('/generate-pdf', {
+      const base = import.meta.env.VITE_BACKEND_URL || ''
+      const res = await fetch(base + '/generate-pdf', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ url, language, reise, mva }),
