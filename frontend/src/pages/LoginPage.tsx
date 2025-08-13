@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { config } from '../config'
 
 export default function LoginPage() {
   const [invitationCode, setInvitationCode] = useState('')
@@ -16,8 +17,9 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      // Get backend URL from environment variable
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://127.0.0.1:8000'
+      // Get backend URL from config
+      const backendUrl = config.backendUrl;
+      console.log('Using backend URL:', backendUrl);
       
       // First verify invitation
       try {
@@ -29,7 +31,7 @@ export default function LoginPage() {
         
         if (!inviteResponse.ok) {
           const error = await inviteResponse.text()
-          showError('Ugyldig invitasjonskode: ' + error)
+          setError('Ugyldig invitasjonskode: ' + error)
           return
         }
         
@@ -44,13 +46,13 @@ export default function LoginPage() {
           const authData = await authResponse.json()
           localStorage.setItem('access_token', authData.access_token)
           localStorage.setItem('refresh_token', authData.refresh_token)
-          showSuccess('Innlogging vellykket! Du kan nå bruke API-et.')
+          setSuccess('Innlogging vellykket! Du kan nå bruke API-et.')
         } else {
           const error = await authResponse.text()
-          showError('Innlogging feilet: ' + error)
+          setError('Innlogging feilet: ' + error)
         }
       } catch (error) {
-        showError('En feil oppstod: ' + error.message)
+        setError('En feil oppstod: ' + (error instanceof Error ? error.message : String(error)))
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'En feil oppstod')
@@ -65,8 +67,8 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      // Get backend URL from environment variable
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://127.0.0.1:8000'
+      // Get backend URL from config
+      const backendUrl = config.backendUrl
       
       // Use test endpoint that bypasses Google OAuth
       const response = await fetch(`${backendUrl}/test/auth`, {

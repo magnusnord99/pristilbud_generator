@@ -5,10 +5,10 @@ steps:
       - -t
       - gcr.io/$PROJECT_ID/pristilbud-frontend
       - --build-arg
-      - VITE_BACKEND_URL=${_VITE_BACKEND_URL}
+      - VITE_BACKEND_URL=${_VITE_BACKEND_URL:-https://din-backend-url.run.app}
       - .
     env:
-      - 'VITE_BACKEND_URL=${_VITE_BACKEND_URL}'
+      - 'VITE_BACKEND_URL=${_VITE_BACKEND_URL:-https://din-backend-url.run.app}'
 images:
   - 'gcr.io/$PROJECT_ID/pristilbud-frontend'
 

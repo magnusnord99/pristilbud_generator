@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import { config } from '../config'
 
 export default function OfferPage() {
   const [url, setUrl] = useState('')
@@ -22,8 +23,8 @@ export default function OfferPage() {
         throw new Error('Ingen tilgangstoken funnet. Vennligst logg inn på nytt.')
       }
 
-      // Get backend URL from environment variable
-      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://127.0.0.1:8000'
+      // Get backend URL from config
+      const backendUrl = config.backendUrl
 
       const response = await fetch(`${backendUrl}/generate-pdf`, {
         method: 'POST',
