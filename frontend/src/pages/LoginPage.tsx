@@ -16,42 +16,41 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      // First verify invitation code
-      const inviteResponse = await fetch('http://127.0.0.1:8000/invitations/use', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ invitation_code: invitationCode })
-      })
-
-      if (!inviteResponse.ok) {
-        const errorText = await inviteResponse.text()
-        throw new Error(`Ugyldig invitasjonskode: ${errorText}`)
-      }
-
-      // Then authenticate with Google token
-      const authResponse = await fetch('http://127.0.0.1:8000/auth/google', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ google_token: googleToken })
-      })
-
-      if (authResponse.ok) {
-        const authData = await authResponse.json()
+      // Get backend URL from environment variable
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://127.0.0.1:8000'
+      
+      // First verify invitation
+      try {
+        const inviteResponse = await fetch(`${backendUrl}/invitations/use`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ invitation_code: invitationCode })
+        })
         
-        // Store tokens in localStorage
-        localStorage.setItem('access_token', authData.access_token)
-        localStorage.setItem('refresh_token', authData.refresh_token)
-        localStorage.setItem('user', JSON.stringify(authData.user))
+        if (!inviteResponse.ok) {
+          const error = await inviteResponse.text()
+          showError('Ugyldig invitasjonskode: ' + error)
+          return
+        }
         
-        setSuccess('Innlogging vellykket! Omdirigerer...')
+        // Then authenticate with Google
+        const authResponse = await fetch(`${backendUrl}/auth/google`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ google_token: googleToken })
+        })
         
-        // Redirect to main page after successful login
-        setTimeout(() => {
-          navigate('/')
-        }, 1500)
-      } else {
-        const errorText = await authResponse.text()
-        throw new Error(`Innlogging feilet: ${errorText}`)
+        if (authResponse.ok) {
+          const authData = await authResponse.json()
+          localStorage.setItem('access_token', authData.access_token)
+          localStorage.setItem('refresh_token', authData.refresh_token)
+          showSuccess('Innlogging vellykket! Du kan nå bruke API-et.')
+        } else {
+          const error = await authResponse.text()
+          showError('Innlogging feilet: ' + error)
+        }
+      } catch (error) {
+        showError('En feil oppstod: ' + error.message)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'En feil oppstod')
@@ -66,8 +65,11 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
+      // Get backend URL from environment variable
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://127.0.0.1:8000'
+      
       // Use test endpoint that bypasses Google OAuth
-      const response = await fetch('http://127.0.0.1:8000/test/auth', {
+      const response = await fetch(`${backendUrl}/test/auth`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       })
@@ -117,7 +119,7 @@ export default function LoginPage() {
           fontWeight: '600',
           textAlign: 'center'
         }}>
-          🔐 Logg inn
+          Logg inn
         </h1>
         
         <p style={{
