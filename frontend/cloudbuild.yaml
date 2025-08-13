@@ -7,6 +7,8 @@ steps:
       - --build-arg
       - VITE_BACKEND_URL=${_VITE_BACKEND_URL}
       - .
+    env:
+      - 'VITE_BACKEND_URL=${_VITE_BACKEND_URL}'
 images:
   - 'gcr.io/$PROJECT_ID/pristilbud-frontend'
 
