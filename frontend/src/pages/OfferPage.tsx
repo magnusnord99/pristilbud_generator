@@ -22,7 +22,10 @@ export default function OfferPage() {
         throw new Error('Ingen tilgangstoken funnet. Vennligst logg inn på nytt.')
       }
 
-      const response = await fetch('http://127.0.0.1:8000/generate-pdf', {
+      // Get backend URL from environment variable
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://127.0.0.1:8000'
+
+      const response = await fetch(`${backendUrl}/generate-pdf`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
