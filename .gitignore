@@ -20,7 +20,8 @@ frontend/dist/
 
 # Env files
 .env
-.env.*
+.env.local
+.env.development
 .cloudrun.env.yaml
 smoringauto_service.json
 credentials.json
