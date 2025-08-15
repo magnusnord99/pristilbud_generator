@@ -9,6 +9,7 @@ backend/*.pyc
 backend/.pytest_cache/
 backend/.coverage
 backend/credentials.json
+backend/app.db
 
 # Node / Frontend
 frontend/node_modules/
@@ -24,4 +25,5 @@ frontend/dist/
 .env.development
 .cloudrun.env.yaml
 smoringauto_service.json
+credentials.json
 credentials.json

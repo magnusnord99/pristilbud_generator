@@ -141,12 +141,12 @@ def _terms_block(c, language, reise, y):
         "er inkludert i budsjettet", "er ikke inkludert i budsjettet"
     )
 
-    y -= 90
+    y -= 120
     c.setFont("Helvetica-Bold", 10)
     c.drawString(50, y, "Vilkår" if language == "NO" else "Terms and Conditions")
     y -= 20
 
-    c.setFont("Helvetica", 10 if language == "EN" else 9)
+    c.setFont("Helvetica", 9)
     text = (
         (terms_no_reise if reise == "y" else terms_no_uten_reise)
         if language == "NO"
