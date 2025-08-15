@@ -29,13 +29,22 @@ def get_sheets_service():
     creds_json = os.environ.get("GOOGLE_CREDENTIALS_JSON")
     if creds_json:
         try:
+            # Debug: print first 100 chars to see what we're getting
+            print(f"🔍 GOOGLE_CREDENTIALS_JSON preview: {creds_json[:100]}...")
+            print(f"🔍 Length: {len(creds_json)}")
+            
             info = json.loads(creds_json)
             credentials_obj = service_account.Credentials.from_service_account_info(
                 info, scopes=SCOPES
             )
-            return build("sheets", "v4", credentials=credentials_obj)
+            return build("sheets", "v4", credentials_obj)
+        except json.JSONDecodeError as exc:
+            print(f"❌ JSON decode error: {exc}")
+            print(f"❌ Invalid JSON content: {creds_json[:200]}...")
+            raise RuntimeError(f"Invalid GOOGLE_CREDENTIALS_JSON content: {exc}") from exc
         except Exception as exc:
-            raise RuntimeError("Invalid GOOGLE_CREDENTIALS_JSON content") from exc
+            print(f"❌ Other error: {exc}")
+            raise RuntimeError(f"Error processing GOOGLE_CREDENTIALS_JSON: {exc}") from exc
 
     creds_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
     if creds_path and os.path.isfile(creds_path):

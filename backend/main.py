@@ -40,8 +40,17 @@ async def startup_event():
         google_creds = os.environ.get("GOOGLE_CREDENTIALS_JSON")
         if google_creds:
             print("✅ Google Sheets credentials found")
-            # Show first few characters to confirm it's loaded
-            print(f"   Credentials preview: {google_creds[:50]}...")
+            print(f"   Credentials length: {len(google_creds)}")
+            print(f"   Credentials preview: {google_creds[:100]}...")
+            
+            # Test if it's valid JSON
+            try:
+                import json
+                json.loads(google_creds)
+                print("✅ Credentials are valid JSON")
+            except json.JSONDecodeError as e:
+                print(f"❌ Credentials are NOT valid JSON: {e}")
+                print(f"❌ First 200 chars: {google_creds[:200]}...")
         else:
             print("❌ Google Sheets credentials not found")
             print("   Set GOOGLE_CREDENTIALS_JSON environment variable")
