@@ -83,6 +83,21 @@ def create_user(google_id: str, email: str, name: str, is_first_user: bool = Fal
     conn.close()
     return user_id
 
+def create_test_user(email: str, name: str, role: str = 'admin') -> int:
+    """Create a test user without Google ID requirement"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        INSERT INTO users (google_id, email, name, role)
+        VALUES (?, ?, ?, ?)
+    ''', (f"test_{email}", email, name, role))
+    
+    user_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return user_id
+
 def get_user_by_google_id(google_id: str) -> Optional[Dict[str, Any]]:
     """Get user by Google ID"""
     conn = get_db_connection()
@@ -100,6 +115,17 @@ def get_user_by_id(user_id: int) -> Optional[Dict[str, Any]]:
     cursor = conn.cursor()
     
     cursor.execute('SELECT * FROM users WHERE id = ?', (user_id,))
+    user = cursor.fetchone()
+    
+    conn.close()
+    return dict(user) if user else None
+
+def get_user_by_email(email: str) -> Optional[Dict[str, Any]]:
+    """Get user by email"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute('SELECT * FROM users WHERE email = ?', (email,))
     user = cursor.fetchone()
     
     conn.close()

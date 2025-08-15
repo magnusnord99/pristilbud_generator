@@ -1,9 +1,9 @@
 # backend/main.py
-from fastapi import FastAPI, HTTPException, Depends
-from fastapi.responses import StreamingResponse, HTMLResponse
+from fastapi import FastAPI, HTTPException, Depends, File, Form, UploadFile
+from fastapi.responses import StreamingResponse, HTMLResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from typing import Literal
+from typing import Literal, List
 from write_to_pdf import generate_pdf
 import auth
 import database
@@ -11,11 +11,43 @@ from models import (
     GoogleAuthRequest, AuthResponse, RefreshTokenRequest,
     CreateInvitationRequest, InvitationResponse, UseInvitationRequest,
     UserResponse, UserListResponse, PromoteUserRequest, DeleteUserRequest,
-    HealthResponse
+    HealthResponse, ProjectType, GenerateContentRequest, GeneratedContent,
+    ImageUploadResponse, ProjectDescriptionRequest, ProjectDescriptionResponse
 )
 from datetime import datetime
+from dotenv import load_dotenv
+import os
+
+# Load environment variables from .env file
+load_dotenv()
 
 app = FastAPI(title="Pristilbud Generator API", version="1.0.0")
+
+# Initialize database on startup
+@app.on_event("startup")
+async def startup_event():
+    """Initialize database and create required directories"""
+    try:
+        database.init_database()
+        print("✅ Database initialized successfully")
+        
+        # Create required directories
+        os.makedirs("uploads", exist_ok=True)
+        os.makedirs("downloads", exist_ok=True)
+        print("✅ Directories created successfully")
+        
+        # Check Google Sheets credentials
+        google_creds = os.environ.get("GOOGLE_CREDENTIALS_JSON")
+        if google_creds:
+            print("✅ Google Sheets credentials found")
+            # Show first few characters to confirm it's loaded
+            print(f"   Credentials preview: {google_creds[:50]}...")
+        else:
+            print("❌ Google Sheets credentials not found")
+            print("   Set GOOGLE_CREDENTIALS_JSON environment variable")
+            
+    except Exception as e:
+        print(f"❌ Error during startup: {e}")
 
 # CORS (adjust origins for your deployment)
 app.add_middleware(
@@ -34,11 +66,13 @@ class PDFRequest(BaseModel):
 
 # Health check endpoint
 @app.get("/healthz", response_model=HealthResponse)
-async def healthz():
+async def healthz(current_user: dict = Depends(auth.get_current_user)):
+    """Health check endpoint that also validates authentication"""
     return HealthResponse(
         status="ok",
         timestamp=datetime.now(),
-        database="connected"
+        database="connected",
+        user=current_user.get("email") if current_user else None
     )
 
 # Authentication endpoints
@@ -164,7 +198,10 @@ def create_pdf(
         raise HTTPException(status_code=400, detail=str(ve))
     except Exception as ex:
         # Upstream errors (e.g., Google API, credentials, etc.)
-        raise HTTPException(status_code=502, detail="Kunne ikke hente data fra Google Sheets") from ex
+        error_detail = f"Kunne ikke hente data fra Google Sheets: {str(ex)}"
+        print(f"❌ PDF generation error: {error_detail}")
+        print(f"   Exception type: {type(ex).__name__}")
+        raise HTTPException(status_code=502, detail=error_detail) from ex
 
     return StreamingResponse(
         buffer,
@@ -241,31 +278,282 @@ async def create_test_invitation():
 # Test endpoint for authentication without Google OAuth (remove in production)
 @app.post("/test/auth")
 async def test_auth():
-    """Test authentication without Google OAuth (remove in production)"""
+    """Test authentication endpoint that bypasses Google OAuth"""
     try:
-        # Check if any users exist
-        if database.is_first_user():
-            raise HTTPException(status_code=400, detail="No users exist yet")
+        print("🔐 Test auth requested")
         
-        # Get the first user (admin)
-        users = database.get_all_users()
-        if not users:
-            raise HTTPException(status_code=400, detail="No users found")
+        # Check if test user exists, if not create it
+        existing_user = database.get_user_by_email("test@example.com")
+        print(f"📋 Existing user check: {existing_user is not None}")
         
-        user = users[0]  # First user is admin
+        if not existing_user:
+            print("👤 Creating test user...")
+            # Create test user in database
+            user_id = database.create_test_user(
+                email="test@example.com",
+                name="Test User",
+                role="admin"
+            )
+            print(f"✅ Test user created with ID: {user_id}")
+            
+            # Get the created user
+            existing_user = database.get_user_by_email("test@example.com")
+            print(f"📋 Retrieved created user: {existing_user is not None}")
         
-        # Create tokens for this user
-        tokens = auth.create_user_tokens(user)
+        if not existing_user:
+            raise Exception("Failed to create or retrieve test user")
         
-        return {
-            "message": "Test authentication successful",
-            "access_token": tokens["access_token"],
-            "refresh_token": tokens["refresh_token"],
-            "token_type": tokens["token_type"],
-            "user": user
-        }
+        print(f"🔑 Creating tokens for user: {existing_user['email']}")
+        tokens = auth.create_user_tokens(existing_user)
+        print("✅ Tokens created successfully")
+        
+        return AuthResponse(
+            access_token=tokens["access_token"],
+            refresh_token=tokens["refresh_token"],
+            token_type=tokens["token_type"],
+            user=existing_user
+        )
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        print(f"❌ Test auth error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Test authentication failed: {str(e)}")
+
+# Project Description endpoints
+@app.get("/project-types", response_model=List[ProjectType])
+async def get_project_types():
+    """Get available project types for description generation"""
+    project_types = [
+        ProjectType(
+            id="event",
+            name="Event",
+            description="Festivaler, konferanser, lanseringer og andre arrangementer",
+            template_prompts=[
+                "Skriv en engasjerende beskrivelse av målgruppen",
+                "Beskriv hovedkonseptet og temaet for arrangementet",
+                "List opp nøkkelfunksjoner og aktiviteter"
+            ]
+        ),
+        ProjectType(
+            id="advertising",
+            name="Reklamekampanje",
+            description="Digital markedsføring, sosiale medier og tradisjonell reklame",
+            template_prompts=[
+                "Definer målgruppen og deres behov",
+                "Beskriv kampanjens hovedbudskap",
+                "List opp kanaler og distribusjonsmetoder"
+            ]
+        ),
+        ProjectType(
+            id="product",
+            name="Produktlansering",
+            description="Nye produkter, tjenester eller løsninger",
+            template_prompts=[
+                "Beskriv produktets hovedfunksjoner",
+                "Identifiser målgruppen og deres smertepunkter",
+                "List opp konkurransefordeler"
+            ]
+        ),
+        ProjectType(
+            id="branding",
+            name="Merkevarebygging",
+            description="Visuell identitet, logoer og merkevarestrategi",
+            template_prompts=[
+                "Beskriv merkevarens personlighet og verdier",
+                "Definer målgruppen og deres preferanser",
+                "List opp nøkkelforskjeller fra konkurrenter"
+            ]
+        )
+    ]
+    return project_types
+
+@app.post("/generate-content", response_model=GeneratedContent)
+async def generate_ai_content(
+    request: GenerateContentRequest,
+    current_user: dict = Depends(auth.get_current_user)
+):
+    """Generate AI content for project description"""
+    try:
+        # TODO: Integrate with actual AI service (OpenAI, Claude, etc.)
+        # For now, return template content based on project type
+        
+        if request.project_type == "event":
+            content = GeneratedContent(
+                goals="Skape et minneverdig arrangement som engasjerer målgruppen og oppnår definerte mål",
+                concept=f"Et innovativt {request.project_name} som kombinerer kreativitet med praktisk funksjonalitet",
+                target_audience=request.target_audience or "Primært målgruppe som er interessert i innholdet",
+                key_features="Interaktive elementer, profesjonell produksjon, engasjerende innhold",
+                timeline="Planlegging: 3 måneder, Produksjon: 1 måned, Lansering: 1 uke",
+                success_metrics="Deltakerantall, engasjement, feedback, måloppnåelse"
+            )
+        elif request.project_type == "advertising":
+            content = GeneratedContent(
+                goals="Øke merkevarebevissthet og drive handlinger fra målgruppen",
+                concept=f"En kreativ reklamekampanje for {request.project_name} som skiller seg ut",
+                target_audience=request.target_audience or "Målgruppe som kan dra nytte av produktet/tjenesten",
+                key_features="Kreativt budskap, strategisk plassering, målbare resultater",
+                timeline="Strategi: 2 uker, Produksjon: 3 uker, Kjøring: 8 uker",
+                success_metrics="Reach, engasjement, klikk, konverteringer"
+            )
+        elif request.project_type == "product":
+            content = GeneratedContent(
+                goals="Lansere et produkt som løser reelle problemer for målgruppen",
+                concept=f"En innovativ løsning som revolusjonerer hvordan {request.project_name} fungerer",
+                target_audience=request.target_audience or "Brukere som trenger denne typen løsning",
+                key_features="Brukervennlig design, kraftig funksjonalitet, skalerbar arkitektur",
+                timeline="Utvikling: 6 måneder, Testing: 2 måneder, Lansering: 1 måned",
+                success_metrics="Brukeradopsjon, tilbakemeldinger, salg, tilbakevendende kunder"
+            )
+        else:  # branding
+            content = GeneratedContent(
+                goals="Skape en sterk og gjenkjennelig merkevareidentitet",
+                concept=f"En visuell identitet som reflekterer {request.project_name} sin essens og verdier",
+                target_audience=request.target_audience or "Kunder og potensielle kunder som identifiserer seg med merkevaren",
+                key_features="Konsistent design, emosjonell tilknytning, fleksibilitet på tvers av medier",
+                timeline="Research: 2 uker, Design: 4 uker, Implementering: 6 uker",
+                success_metrics="Merkevaregjenkjenning, kundelojalitet, visuell konsistens"
+            )
+        
+        return content
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Feil ved generering av innhold: {str(e)}")
+
+@app.post("/upload-image")
+async def upload_image(
+    file: UploadFile = File(...),
+    placeholder_type: str = Form(...),
+    current_user: dict = Depends(auth.get_current_user)
+):
+    """Upload image for project description"""
+    try:
+        # Validate file type
+        if not file.content_type.startswith('image/'):
+            raise HTTPException(status_code=400, detail="Kun bildefiler er tillatt")
+        
+        # Generate unique filename
+        import uuid
+        import os
+        from PIL import Image
+        
+        file_extension = file.filename.split('.')[-1]
+        image_id = str(uuid.uuid4())
+        filename = f"{image_id}.{file_extension}"
+        
+        # Create uploads directory if it doesn't exist
+        upload_dir = "uploads"
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        file_path = os.path.join(upload_dir, filename)
+        
+        # Save and process image
+        with open(file_path, "wb") as buffer:
+            content = await file.read()
+            buffer.write(content)
+        
+        # Process image (resize if needed, add watermark, etc.)
+        with Image.open(file_path) as img:
+            # Resize if too large (max 1920x1080)
+            if img.width > 1920 or img.height > 1080:
+                img.thumbnail((1920, 1080), Image.Resampling.LANCZOS)
+                img.save(file_path, quality=85, optimize=True)
+        
+        # Return image info
+        return ImageUploadResponse(
+            image_id=image_id,
+            filename=filename,
+            url=f"/uploads/{filename}",
+            placeholder_type=placeholder_type
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Feil ved bildeopplasting: {str(e)}")
+
+@app.post("/generate-project-description", response_model=ProjectDescriptionResponse)
+async def generate_project_description_pdf(
+    request: ProjectDescriptionRequest,
+    current_user: dict = Depends(auth.get_current_user)
+):
+    """Generate PDF project description with images and AI content"""
+    try:
+        from write_to_pdf import generate_project_description_pdf as generate_pdf
+        import uuid
+        import os
+        
+        project_id = str(uuid.uuid4())
+        
+        print(f"📄 Generating PDF for project: {request.project_name}")
+        print(f"📊 Content sections: {len(request.generated_content.dict())}")
+        print(f"🖼️ Images: {len(request.images)}")
+        
+        # Generate PDF using the new function
+        pdf_buffer = generate_pdf(
+            project_type=request.project_type,
+            project_name=request.project_name,
+            generated_content=request.generated_content.dict(),
+            images=request.images,
+            language=request.language
+        )
+        
+        # Create downloads directory if it doesn't exist
+        download_dir = "downloads"
+        os.makedirs(download_dir, exist_ok=True)
+        
+        # Save PDF to file
+        pdf_filename = f"{project_id}.pdf"
+        pdf_path = os.path.join(download_dir, pdf_filename)
+        
+        with open(pdf_path, "wb") as f:
+            f.write(pdf_buffer.getvalue())
+        
+        print(f"✅ PDF saved to: {pdf_path}")
+        print(f"📏 File size: {os.path.getsize(pdf_path)} bytes")
+        
+        return ProjectDescriptionResponse(
+            pdf_url=f"/downloads/{pdf_filename}",
+            project_id=project_id,
+            created_at=datetime.now()
+        )
+    except Exception as e:
+        print(f"❌ PDF generation error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Feil ved PDF-generering: {str(e)}")
+
+# Serve uploaded files
+@app.get("/uploads/{filename}")
+async def serve_upload(filename: str):
+    """Serve uploaded images"""
+    import os
+    file_path = os.path.join("uploads", filename)
+    if os.path.exists(file_path):
+        return FileResponse(file_path)
+    raise HTTPException(status_code=404, detail="Fil ikke funnet")
+
+# Serve downloaded PDFs
+@app.get("/downloads/{filename}")
+async def serve_download(
+    filename: str,
+    current_user: dict = Depends(auth.get_current_user)
+):
+    """Serve generated PDFs (requires authentication)"""
+    import os
+    file_path = os.path.join("downloads", filename)
+    
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="PDF ikke funnet")
+    
+    # Check file size
+    file_size = os.path.getsize(file_path)
+    if file_size == 0:
+        raise HTTPException(status_code=500, detail="PDF-fil er tom")
+    
+    print(f"📥 Serving PDF: {filename} (size: {file_size} bytes) for user: {current_user.get('email')}")
+    
+    return FileResponse(
+        file_path, 
+        media_type='application/pdf', 
+        filename=filename,
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
 
 # Root endpoint (shows login form)
 @app.get("/", response_class=HTMLResponse)

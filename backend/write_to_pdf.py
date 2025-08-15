@@ -258,3 +258,231 @@ def generate_pdf(google_url: str, language: str, reise: str, mva: str):
     c.save()
     buf.seek(0)
     return buf, filename
+
+
+def generate_project_description_pdf(
+    project_type: str,
+    project_name: str,
+    generated_content: dict,
+    images: list,
+    language: str = "NO"
+) -> BytesIO:
+    """
+    Generate a project description PDF with AI content and images
+    Matches the professional InDesign presentation style with gradient background
+    
+    Args:
+        project_type: Type of project (event, advertising, product, branding)
+        project_name: Name of the project
+        generated_content: AI-generated content dictionary
+        images: List of image objects with url and placeholder_type
+        language: Language for the PDF (NO or EN)
+    
+    Returns:
+        BytesIO object containing the PDF
+    """
+    buffer = BytesIO()
+    
+    # Use landscape A4 for better layout
+    from reportlab.lib.pagesizes import A4
+    page_width, page_height = A4
+    # Swap for landscape
+    page_width, page_height = page_height, page_width
+    
+    c = canvas.Canvas(buffer, pagesize=(page_width, page_height))
+    
+    # Page dimensions for landscape
+    left_margin = 60
+    right_margin = page_width - 60
+    top_margin = page_height - 60
+    content_width = right_margin - left_margin
+    
+    # Add gradient background image if available
+    background_paths = [
+        os.path.join(BASE_DIR, "assets", "backgrounds", "Grainy Gradient Background 10.jpg"),
+        os.path.join(BASE_DIR, "assets", "backgrounds", "Grainy Gradient Background 10.png"),
+        os.path.join(BASE_DIR, "assets", "backgrounds", "gradient_background.jpg"),
+        os.path.join(BASE_DIR, "assets", "backgrounds", "gradient_background.png")
+    ]
+    
+    # Check if PSD file exists and warn user
+    psd_path = os.path.join(BASE_DIR, "assets", "backgrounds", "Grainy Gradient Background 10.psd")
+    if os.path.exists(psd_path):
+        print("⚠️ PSD file found but not supported. Please convert to JPG or PNG:")
+        print(f"   Found: {psd_path}")
+        print("   Convert to: assets/backgrounds/Grainy Gradient Background 10.jpg")
+        print("   Or use: assets/backgrounds/Grainy Gradient Background 10.png")
+    
+    background_path = None
+    for path in background_paths:
+        if os.path.exists(path):
+            background_path = path
+            break
+    
+    if background_path:
+        # Draw background image to cover entire page
+        c.drawImage(background_path, 0, 0, width=page_width, height=page_height)
+        print(f"✅ Background image applied: {background_path}")
+    else:
+        # Fallback: create gradient-like background with rectangles
+        print("⚠️ No supported background image found, using fallback gradient")
+        print("💡 Supported formats: JPG, PNG, GIF, TIFF")
+        print("💡 PSD files must be converted to JPG or PNG")
+        c.setFillColorRGB(1, 0.6, 0.2)  # Orange
+        c.rect(0, 0, page_width/2, page_height, fill=1)
+        c.setFillColorRGB(0.2, 0.4, 0.8)  # Blue
+        c.rect(page_width/2, 0, page_width/2, page_height, fill=1)
+    
+    # Header section - BILLABONG style
+    y_position = top_margin - 40
+    
+    # Main title (centered, large, white)
+    c.setFont("Helvetica-Bold", 36)
+    c.setFillColorRGB(1, 1, 1)  # White text
+    
+    title = project_name.upper()
+    if language == "EN":
+        title = project_name.upper()
+    
+    # Center the title
+    title_width = c.stringWidth(title, "Helvetica-Bold", 36)
+    title_x = (page_width - title_width) / 2
+    c.drawString(title_x, y_position, title)
+    
+    # Subtitle
+    y_position -= 60
+    c.setFont("Helvetica", 20)
+    subtitle = f"{project_type.upper()} PRODUKSJON 2025"
+    if language == "EN":
+        subtitle = f"{project_type.upper()} PRODUCTION 2025"
+    
+    subtitle_width = c.stringWidth(subtitle, "Helvetica", 20)
+    subtitle_x = (page_width - subtitle_width) / 2
+    c.drawString(subtitle_x, y_position, subtitle)
+    
+    y_position -= 80
+    
+    # LEA FILMS logo (top right)
+    if os.path.exists(LOGO_PATH):
+        logo_width = 100
+        logo_height = 50
+        c.drawImage(LOGO_PATH, right_margin - logo_width - 20, top_margin - logo_height, 
+                   width=logo_width, height=logo_height, preserveAspectRatio=True, mask='auto')
+    
+    # Main content area - Two large images side by side (like BILLABONG slide)
+    content_start_y = y_position
+    
+    if images and len(images) >= 2:
+        # Left image (large)
+        left_image = images[0]
+        left_image_x = left_margin
+        left_image_width = (content_width - 40) / 2
+        left_image_height = 300
+        
+        # Right image (large)
+        right_image = images[1] if len(images) > 1 else images[0]
+        right_image_x = left_margin + left_image_width + 40
+        right_image_width = (content_width - 40) / 2
+        right_image_height = 300
+        
+        # Draw images with white borders
+        c.setStrokeColorRGB(1, 1, 1)
+        c.setLineWidth(3)
+        
+        # Left image
+        try:
+            image_path = os.path.join(BASE_DIR, "uploads", left_image["filename"])
+            if os.path.exists(image_path):
+                c.rect(left_image_x - 5, content_start_y - 5, left_image_width + 10, left_image_height + 10)
+                c.drawImage(image_path, left_image_x, content_start_y, width=left_image_width, height=left_image_height, 
+                           preserveAspectRatio=True, mask='auto')
+            else:
+                # Placeholder
+                c.setFillColorRGB(0.9, 0.9, 0.9)
+                c.rect(left_image_x, content_start_y, left_image_width, left_image_height, fill=1)
+                c.setFillColorRGB(0.5, 0.5, 0.5)
+                c.drawString(left_image_x + 10, content_start_y + left_image_height/2, f"Image: {left_image['placeholder_type']}")
+        except Exception as e:
+            print(f"Error loading left image: {e}")
+            c.setFillColorRGB(0.9, 0.9, 0.9)
+            c.rect(left_image_x, content_start_y, left_image_width, left_image_height, fill=1)
+        
+        # Right image
+        try:
+            image_path = os.path.join(BASE_DIR, "uploads", right_image["filename"])
+            if os.path.exists(image_path):
+                c.rect(right_image_x - 5, content_start_y - 5, right_image_width + 10, right_image_height + 10)
+                c.drawImage(image_path, right_image_x, content_start_y, width=right_image_width, height=right_image_height, 
+                           preserveAspectRatio=True, mask='auto')
+            else:
+                # Placeholder
+                c.setFillColorRGB(0.9, 0.9, 0.9)
+                c.rect(right_image_x, content_start_y, right_image_width, right_image_height, fill=1)
+                c.setFillColorRGB(0.5, 0.5, 0.5)
+                c.drawString(right_image_x + 10, content_start_y + right_image_height/2, f"Image: {right_image['placeholder_type']}")
+        except Exception as e:
+            print(f"Error loading right image: {e}")
+            c.setFillColorRGB(0.9, 0.9, 0.9)
+            c.rect(right_image_x, content_start_y, right_image_width, right_image_height, fill=1)
+        
+        y_position = content_start_y - right_image_height - 60
+    else:
+        # No images, add content sections
+        y_position = content_start_y - 100
+    
+    # Content sections below images (if space allows)
+    if y_position > 200:
+        # Add some key content points
+        c.setFont("Helvetica-Bold", 16)
+        c.setFillColorRGB(1, 1, 1)  # White text
+        
+        content_sections = [
+            ("Mål", generated_content.get("goals", "")),
+            ("Konsept", generated_content.get("concept", ""))
+        ]
+        
+        for section_title, content in content_sections:
+            if y_position < 150:
+                break
+                
+            # Section title
+            c.drawString(left_margin, y_position, section_title)
+            y_position -= 25
+            
+            # Section content (truncated for space)
+            c.setFont("Helvetica", 11)
+            content_preview = content[:80] + "..." if len(content) > 80 else content
+            c.drawString(left_margin, y_position, content_preview)
+            y_position -= 40
+    
+    # Footer with website and page number
+    c.showPage()
+    c.setPageSize((page_width, page_height))
+    
+    # Apply background to footer page too
+    if background_path:
+        c.drawImage(background_path, 0, 0, width=page_width, height=page_height)
+    else:
+        # Fallback gradient
+        c.setFillColorRGB(1, 0.6, 0.2)
+        c.rect(0, 0, page_width/2, page_height, fill=1)
+        c.setFillColorRGB(0.2, 0.4, 0.8)
+        c.rect(page_width/2, 0, page_width/2, page_height, fill=1)
+    
+    # Footer content (white text)
+    c.setFillColorRGB(1, 1, 1)
+    c.setFont("Helvetica", 12)
+    
+    # Website (centered)
+    website = "www.leafilms.no"
+    website_width = c.stringWidth(website, "Helvetica", 12)
+    website_x = (page_width - website_width) / 2
+    c.drawString(website_x, 30, website)
+    
+    # Page number (bottom left)
+    page_text = "1"
+    c.drawString(20, 20, page_text)
+    
+    c.save()
+    buffer.seek(0)
+    return buffer
