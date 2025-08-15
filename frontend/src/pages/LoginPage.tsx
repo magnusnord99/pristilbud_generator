@@ -121,25 +121,10 @@ export default function LoginPage() {
           top: '20px',
           left: '20px',
           display: 'flex',
-          alignItems: 'center',
-          gap: '8px'
+          alignItems: 'center'
         }}>
-          <div style={{
-            width: '32px',
-            height: '32px',
-            backgroundColor: '#10b981',
-            borderRadius: '6px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: 'white',
-            fontWeight: 'bold',
-            fontSize: '18px'
-          }}>
-            🍃
-          </div>
           <span style={{
-            color: '#10b981',
+            color: '#000000',
             fontWeight: '700',
             fontSize: '1.2rem',
             letterSpacing: '0.5px'

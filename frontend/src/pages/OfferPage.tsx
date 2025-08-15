@@ -103,38 +103,23 @@ export default function OfferPage() {
       minHeight: '400px',
       position: 'relative'
     }}>
-      {/* Leafilms Logo */}
-      <div style={{
-        position: 'absolute',
-        top: '20px',
-        left: '20px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px'
-      }}>
+              {/* Leafilms Logo */}
         <div style={{
-          width: '32px',
-          height: '32px',
-          backgroundColor: '#10b981',
-          borderRadius: '6px',
+          position: 'absolute',
+          top: '20px',
+          left: '20px',
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: 'white',
-          fontWeight: 'bold',
-          fontSize: '18px'
+          alignItems: 'center'
         }}>
-          🍃
+          <span style={{
+            color: '#000000',
+            fontWeight: '700',
+            fontSize: '1.2rem',
+            letterSpacing: '0.5px'
+          }}>
+            Leafilms
+          </span>
         </div>
-        <span style={{
-          color: '#10b981',
-          fontWeight: '700',
-          fontSize: '1.2rem',
-          letterSpacing: '0.5px'
-        }}>
-          Leafilms
-        </span>
-      </div>
 
       <h1 style={{
         margin: '0 0 24px 0',
