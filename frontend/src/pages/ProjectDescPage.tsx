@@ -766,7 +766,7 @@ export default function ProjectDescPage() {
                         gridTemplateColumns: '1fr 1fr', 
                         gap: '8px'
                       }}>
-                        {images.map((image, index) => (
+                        {images.map((image) => (
                           <div key={image.image_id} style={{
                             position: 'relative',
                             border: '1px solid #d1d5db',
