@@ -50,6 +50,10 @@ export default function ProjectDescPage() {
     fetchProjectTypes()
   }, [])
 
+  useEffect(() => {
+    console.log('🔄 Project types state updated:', projectTypes)
+  }, [projectTypes])
+
   const validateToken = async () => {
     const token = localStorage.getItem('access_token')
     if (!token) {
@@ -80,24 +84,25 @@ export default function ProjectDescPage() {
 
   const fetchProjectTypes = async () => {
     try {
-      if (!(await validateToken())) {
-        return
-      }
+      console.log('🔍 Fetching project types...')
+      console.log('🌐 Backend URL:', config.backendUrl)
+      
+      const response = await fetch(`${config.backendUrl}/project-types`)
 
-      const token = localStorage.getItem('access_token')
-      const response = await fetch(`${config.backendUrl}/project-types`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
+      console.log('📥 Response status:', response.status)
+      console.log('📥 Response headers:', Object.fromEntries(response.headers.entries()))
 
       if (response.ok) {
         const types = await response.json()
+        console.log('✅ Project types received:', types)
         setProjectTypes(types)
       } else {
+        const errorText = await response.text()
+        console.error('❌ Error response:', errorText)
         setError('Kunne ikke hente prosjekttyper')
       }
     } catch (err) {
+      console.error('❌ Network error:', err)
       setError('Feil ved henting av prosjekttyper')
     }
   }
