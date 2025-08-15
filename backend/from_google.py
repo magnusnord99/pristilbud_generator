@@ -37,7 +37,7 @@ def get_sheets_service():
             credentials_obj = service_account.Credentials.from_service_account_info(
                 info, scopes=SCOPES
             )
-            return build("sheets", "v4", credentials_obj)
+            return build("sheets", "v4", credentials=credentials_obj)
         except json.JSONDecodeError as exc:
             print(f"❌ JSON decode error: {exc}")
             print(f"❌ Invalid JSON content: {creds_json[:200]}...")
