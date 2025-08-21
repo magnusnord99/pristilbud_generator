@@ -236,9 +236,16 @@ export default function ProjectDescPage() {
         })
       })
 
+      // Debug: Log what's being sent
+      console.log('📤 Sending to PDF generation:')
+      console.log('  Project type:', selectedType)
+      console.log('  Project name:', projectName)
+      console.log('  Images:', images.map(img => ({ filename: img.filename, placeholder_type: img.placeholder_type })))
+      console.log('  Language:', language)
+
       if (response.ok) {
         const result = await response.json()
-        console.log('✅ PDF generated:', result)
+        console.log('PDF generated:', result)
         setGeneratedPDFUrl(result.pdf_url)
         setSuccess('PDF generert! Du kan nå laste den ned.')
         setCurrentStep(3)
@@ -544,30 +551,31 @@ export default function ProjectDescPage() {
             
             {/* Generated Content Display */}
             <div style={{
-              backgroundColor: '#f8fafc',
+              backgroundColor: '#1e293b',
               padding: '20px',
               borderRadius: '12px',
-              marginBottom: '24px'
+              marginBottom: '24px',
+              border: '1px solid #334155'
             }}>
-              <h3 style={{ marginBottom: '16px', color: '#1e293b' }}>Generert innhold:</h3>
+              <h3 style={{ marginBottom: '16px', color: '#f8fafc' }}>Generert innhold:</h3>
               <div style={{ display: 'grid', gap: '16px' }}>
-                <div>
-                  <strong>Mål:</strong> {generatedContent.goals}
+                <div style={{ color: '#e2e8f0' }}>
+                  <strong style={{ color: '#fbbf24' }}>Mål:</strong> {generatedContent.goals}
                 </div>
-                <div>
-                  <strong>Konsept:</strong> {generatedContent.concept}
+                <div style={{ color: '#e2e8f0' }}>
+                  <strong style={{ color: '#fbbf24' }}>Konsept:</strong> {generatedContent.concept}
                 </div>
-                <div>
-                  <strong>Målgruppe:</strong> {generatedContent.target_audience}
+                <div style={{ color: '#e2e8f0' }}>
+                  <strong style={{ color: '#fbbf24' }}>Målgruppe:</strong> {generatedContent.target_audience}
                 </div>
-                <div>
-                  <strong>Nøkkelfunksjoner:</strong> {generatedContent.key_features}
+                <div style={{ color: '#e2e8f0' }}>
+                  <strong style={{ color: '#fbbf24' }}>Nøkkelfunksjoner:</strong> {generatedContent.key_features}
                 </div>
-                <div>
-                  <strong>Tidsplan:</strong> {generatedContent.timeline}
+                <div style={{ color: '#e2e8f0' }}>
+                  <strong style={{ color: '#fbbf24' }}>Tidsplan:</strong> {generatedContent.timeline}
                 </div>
-                <div>
-                  <strong>Suksesskriterier:</strong> {generatedContent.success_metrics}
+                <div style={{ color: '#e2e8f0' }}>
+                  <strong style={{ color: '#fbbf24' }}>Suksesskriterier:</strong> {generatedContent.success_metrics}
                 </div>
               </div>
             </div>
@@ -683,8 +691,26 @@ export default function ProjectDescPage() {
               </div>
               
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px' }}>
-                {['header', 'content', 'footer'].map(placeholderType => (
-                  <div key={placeholderType} style={{
+                {['logo', 'content', 'content'].map((placeholderType, index) => {
+                  // Create descriptive labels for the two content images
+                  let displayLabel = placeholderType;
+                  let description = '';
+                  
+                  if (placeholderType === 'logo') {
+                    displayLabel = 'Logo';
+                    description = 'Kundelogo (vises øverst i PDF)';
+                  } else if (placeholderType === 'content') {
+                    if (index === 1) {
+                      displayLabel = 'Stående forsidebilde';
+                      description = 'Høyt format - brukes som venstre bilde';
+                    } else {
+                      displayLabel = 'Liggende forsidebilde';
+                      description = 'Bredt format - brukes som høyre bilde';
+                    }
+                  }
+                  
+                  return (
+                  <div key={`${placeholderType}-${index}`} style={{
                     border: '2px dashed #d1d5db',
                     borderRadius: '12px',
                     padding: '20px',
@@ -693,7 +719,7 @@ export default function ProjectDescPage() {
                     transition: 'all 0.2s ease'
                   }}>
                     <div style={{ marginBottom: '12px' }}>
-                      <strong style={{ textTransform: 'capitalize' }}>{placeholderType}</strong>
+                      <strong style={{ textTransform: 'capitalize' }}>{displayLabel}</strong>
                     </div>
                     <div style={{ 
                       fontSize: '0.8rem', 
@@ -701,9 +727,7 @@ export default function ProjectDescPage() {
                       marginBottom: '12px',
                       fontStyle: 'italic'
                     }}>
-                      {placeholderType === 'header' && 'Toppbilde for dokumentet'}
-                      {placeholderType === 'content' && 'Hovedbilde for innhold'}
-                      {placeholderType === 'footer' && 'Avsluttende bilde'}
+                      {description}
                     </div>
                     <input
                       type="file"
@@ -727,7 +751,8 @@ export default function ProjectDescPage() {
                       {uploadingImage ? 'Laster opp...' : 'Velg bilde'}
                     </label>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
@@ -911,7 +936,7 @@ export default function ProjectDescPage() {
                   padding: '8px 12px',
                   borderRadius: '6px',
                   border: '1px solid #d1d5db',
-                  fontSize: '1rem'
+          fontSize: '1rem'
                 }}
               >
                 <option value="NO">Norsk</option>
@@ -961,7 +986,7 @@ export default function ProjectDescPage() {
               fontSize: '4rem',
               marginBottom: '24px'
             }}>
-              🎉
+              
             </div>
             <h2 style={{ marginBottom: '16px', color: '#10b981' }}>
               PDF generert!

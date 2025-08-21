@@ -7,6 +7,7 @@ export default function OfferPage() {
   const [language, setLanguage] = useState<'NO' | 'EN'>('NO')
   const [reise, setReise] = useState<'y' | 'n'>('y')
   const [mva, setMva] = useState<'y' | 'n'>('y')
+  const [discountPercent, setDiscountPercent] = useState<number>(0)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const { user, isAuthenticated } = useAuth()
@@ -36,7 +37,8 @@ export default function OfferPage() {
           url,
           language,
           reise,
-          mva
+          mva,
+          discount_percent: discountPercent
         })
       })
 
@@ -53,7 +55,19 @@ export default function OfferPage() {
       const downloadUrl = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = downloadUrl
-      a.download = `pristilbud_${language}_${Date.now()}.pdf`
+      
+      // Get filename from response headers or use default
+      const contentDisposition = response.headers.get('Content-Disposition')
+      let filename = `pristilbud_${language}_${Date.now()}.pdf` // fallback
+      
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/)
+        if (filenameMatch) {
+          filename = filenameMatch[1]
+        }
+      }
+      
+      a.download = filename
       document.body.appendChild(a)
       a.click()
       window.URL.revokeObjectURL(downloadUrl)
@@ -250,6 +264,43 @@ export default function OfferPage() {
               <option value="y">Ja</option>
               <option value="n">Nei</option>
             </select>
+          </div>
+
+          <div>
+            <label style={{
+              display: 'block',
+              marginBottom: '8px',
+              fontWeight: '500',
+              color: '#2c3e50',
+              fontSize: '1rem'
+            }}>
+              Rabatt (%)
+            </label>
+            <input
+              type="number"
+              min="0"
+              max="100"
+              step="0.1"
+              value={discountPercent}
+              onChange={(e) => setDiscountPercent(parseFloat(e.target.value) || 0)}
+              placeholder="0"
+              style={{
+                width: '100%',
+                padding: '12px',
+                borderRadius: '8px',
+                border: '1px solid #d1d5db',
+                fontSize: '1rem',
+                outline: 'none'
+              }}
+            />
+            <small style={{
+              color: '#6b7280',
+              fontSize: '0.875rem',
+              marginTop: '4px',
+              display: 'block'
+            }}>
+              Legg til rabatt i prosent (0-100). Produksjonskostnader får ikke rabatt.
+            </small>
           </div>
         </div>
 

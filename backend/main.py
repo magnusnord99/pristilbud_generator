@@ -72,6 +72,7 @@ class PDFRequest(BaseModel):
     language: Literal["NO", "EN"]
     reise: Literal["y", "n"]
     mva: Literal["y", "n"]
+    discount_percent: float = Field(default=0, ge=0, le=100, description="Rabatt i prosent (0-100)")
 
 # Health check endpoint
 @app.get("/healthz", response_model=HealthResponse)
@@ -201,7 +202,7 @@ def create_pdf(
         # Check rate limit
         auth.check_rate_limit_middleware(current_user["id"], "generate-pdf")
         
-        buffer, filename = generate_pdf(req.url, req.language, req.reise, req.mva)
+        buffer, filename = generate_pdf(req.url, req.language, req.reise, req.mva, req.discount_percent)
     except ValueError as ve:
         # e.g., invalid URL format
         raise HTTPException(status_code=400, detail=str(ve))
@@ -461,10 +462,15 @@ async def upload_image(
         
         # Process image (resize if needed, add watermark, etc.)
         with Image.open(file_path) as img:
+            print(f"📸 Image uploaded: {img.format} {img.mode} {img.width}x{img.height}")
             # Resize if too large (max 1920x1080)
             if img.width > 1920 or img.height > 1080:
+                print(f"🔄 Resizing image from {img.width}x{img.height} to max 1920x1080")
                 img.thumbnail((1920, 1080), Image.Resampling.LANCZOS)
                 img.save(file_path, quality=85, optimize=True)
+                print(f"✅ Image resized and saved")
+            else:
+                print(f"✅ Image size OK, no resizing needed")
         
         # Return image info
         return ImageUploadResponse(
@@ -492,6 +498,8 @@ async def generate_project_description_pdf(
         print(f"📄 Generating PDF for project: {request.project_name}")
         print(f"📊 Content sections: {len(request.generated_content.dict())}")
         print(f"🖼️ Images: {len(request.images)}")
+        for i, img in enumerate(request.images):
+            print(f"  🖼️ Image {i+1}: {img.filename} ({img.placeholder_type}) - {img.url}")
         
         # Generate PDF using the new function
         pdf_buffer = generate_pdf(

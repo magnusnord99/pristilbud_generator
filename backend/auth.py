@@ -24,8 +24,8 @@ GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "your-google-client-id")
 
 # Rate limiting configuration
 RATE_LIMITS = {
-    "generate-pdf": {"max_requests": 10, "window_minutes": 60},  # 10 PDFs per hour
-    "default": {"max_requests": 100, "window_minutes": 60}        # 100 requests per hour
+    "generate-pdf": {"max_requests": 100, "window_minutes": 60},  # 100 PDFs per hour
+    "default": {"max_requests": 1000, "window_minutes": 60}       # 1000 requests per hour
 }
 
 security = HTTPBearer()
