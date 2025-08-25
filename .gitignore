@@ -11,6 +11,33 @@ backend/.coverage
 backend/credentials.json
 backend/app.db
 
+# Large files
+*.pdf
+*.psd
+*.psb
+*.ai
+*.eps
+*.tiff
+*.tif
+*.bmp
+*.gif
+*.mp4
+*.mov
+*.avi
+*.wmv
+*.flv
+*.webm
+*.mp3
+*.wav
+*.flac
+*.aac
+*.ogg
+
+# Downloads and test files
+backend/downloads/
+backend/test_*.pdf
+backend/assets/backgrounds/*.psd
+
 # Node / Frontend
 frontend/node_modules/
 frontend/dist/
