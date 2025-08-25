@@ -54,3 +54,7 @@ frontend/dist/
 smoringauto_service.json
 credentials.json
 credentials.json
+*.psd
+*.pdf
+backend/downloads/
+backend/assets/backgrounds/*.png
