@@ -54,33 +54,7 @@ export default function ProjectDescPage() {
     console.log('🔄 Project types state updated:', projectTypes)
   }, [projectTypes])
 
-  const validateToken = async () => {
-    const token = localStorage.getItem('access_token')
-    if (!token) {
-      navigate('/login')
-      return false
-    }
 
-    try {
-      const response = await fetch(`${config.backendUrl}/healthz`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
-
-      if (response.status === 401) {
-        localStorage.removeItem('access_token')
-        localStorage.removeItem('refresh_token')
-        navigate('/login')
-        return false
-      }
-
-      return true
-    } catch (err) {
-      console.error('Token validation error:', err)
-      return false
-    }
-  }
 
   const fetchProjectTypes = async () => {
     try {
