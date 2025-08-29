@@ -28,20 +28,25 @@ app = FastAPI(title="Pristilbud Generator API", version="1.0.0")
 async def startup_event():
     """Initialize database and create required directories"""
     try:
-        database.init_database()
-        print("✅ Database initialized successfully")
+        print("🚀 Starting Pristilbud Generator API...")
+        print(f"📁 Working directory: {os.getcwd()}")
+        print(f"🐍 Python version: {os.sys.version}")
+        print(f"🔧 Environment: {os.environ.get('ENVIRONMENT', 'development')}")
         
         # Create required directories
         os.makedirs("uploads", exist_ok=True)
         os.makedirs("downloads", exist_ok=True)
         print("✅ Directories created successfully")
         
+        # Initialize database
+        database.init_database()
+        print("✅ Database initialized successfully")
+        
         # Check Google Sheets credentials
         google_creds = os.environ.get("GOOGLE_CREDENTIALS_JSON")
         if google_creds:
             print("✅ Google Sheets credentials found")
             print(f"   Credentials length: {len(google_creds)}")
-            print(f"   Credentials preview: {google_creds[:100]}...")
             
             # Test if it's valid JSON
             try:
@@ -52,11 +57,16 @@ async def startup_event():
                 print(f"❌ Credentials are NOT valid JSON: {e}")
                 print(f"❌ First 200 chars: {google_creds[:200]}...")
         else:
-            print("❌ Google Sheets credentials not found")
+            print("⚠️  Google Sheets credentials not found")
             print("   Set GOOGLE_CREDENTIALS_JSON environment variable")
             
+        print("✅ Pristilbud Generator API startup completed successfully")
+        
     except Exception as e:
-        print(f"❌ Error during startup: {e}")
+        print(f"❌ Critical error during startup: {e}")
+        import traceback
+        traceback.print_exc()
+        # Don't raise here - let the app start but log the error
 
 # CORS (adjust origins for your deployment)
 app.add_middleware(
@@ -73,6 +83,34 @@ class PDFRequest(BaseModel):
     reise: Literal["y", "n"]
     mva: Literal["y", "n"]
     discount_percent: float = Field(default=0, ge=0, le=100, description="Rabatt i prosent (0-100)")
+
+# Simple public health check (no auth required)
+@app.get("/health", response_model=HealthResponse)
+async def health_check():
+    """Simple health check endpoint for deployment monitoring"""
+    try:
+        # Basic checks
+        db_status = "connected" if database.init_database() else "error"
+        
+        return HealthResponse(
+            status="ok",
+            timestamp=datetime.now(),
+            database=db_status,
+            user=None
+        )
+    except Exception as e:
+        return HealthResponse(
+            status="error",
+            timestamp=datetime.now(),
+            database="error",
+            user=None
+        )
+
+# Simple ping endpoint (no dependencies)
+@app.get("/ping")
+async def ping():
+    """Simple ping endpoint to test if server is running"""
+    return {"message": "pong", "timestamp": datetime.now().isoformat()}
 
 # Health check endpoint
 @app.get("/healthz", response_model=HealthResponse)
