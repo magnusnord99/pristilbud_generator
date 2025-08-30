@@ -292,13 +292,40 @@ def generate_pdf(google_url: str, language: str, reise: str, mva: str, discount_
     company_info = data["company_info"]
     total_excl_mva = data["total_excl_mva"]
     total_incl_mva = data["total_incl_mva"]
+    
+    # Debug: print what we got from Google Sheets
+    print(f"🔍 generate_pdf - Data fra Google Sheets:")
+    print(f"   Details: {details}")
+    print(f"   Details type: {type(details)}")
+    print(f"   Details keys: {list(details.keys()) if isinstance(details, dict) else 'NOT_DICT'}")
 
     # Foreslått filnavn
-    kunde = _sanitize_filename(details.get("Kunde", "N_A"))
-    prosjekt = _sanitize_filename(details.get("Prosjekt", "N_A"))
-    versjon = _sanitize_filename(details.get("Versjon", "v0"))
+    kunde = details.get("Kunde", "N_A")
+    prosjekt = details.get("Prosjekt", "N_A")
+    versjon = details.get("Versjon", "v0")
+    
+    # Debug: print what we're getting
+    print(f"🔍 Filnavn data fra Google Sheets:")
+    print(f"   Kunde: '{kunde}'")
+    print(f"   Prosjekt: '{prosjekt}'")
+    print(f"   Versjon: '{versjon}'")
+    print(f"   Details keys: {list(details.keys())}")
+    
+    # Sanitize filnavn (behold mer av original tekst)
+    kunde_clean = _sanitize_filename(kunde)
+    prosjekt_clean = _sanitize_filename(prosjekt)
+    versjon_clean = _sanitize_filename(versjon)
+    
+    # Debug: print sanitized values
+    print(f"🔍 Sanitized filnavn:")
+    print(f"   Kunde: '{kunde_clean}'")
+    print(f"   Prosjekt: '{prosjekt_clean}'")
+    print(f"   Versjon: '{versjon_clean}'")
+    
     base = "pristilbud" if language == "NO" else "price_offer"
-    filename = f"{base}_{kunde}_{prosjekt}_{versjon}_@leafilms.pdf"
+    filename = f"{base}_{kunde_clean}_{prosjekt_clean}_{versjon_clean}_@leafilms.pdf"
+    
+    print(f"🔍 Final filename: '{filename}'")
 
     # Lag PDF i minnet
     buf = BytesIO()

@@ -104,6 +104,28 @@ def fetch_google_data(SPREADSHEET_ID):
         # Fetch project and customer details from Kundeinfo!A:B
         details_result = sheet.values().get(spreadsheetId=SPREADSHEET_ID, range=DETAILS_RANGE).execute()
         details_values = details_result.get("values", [])
+        
+        # Debug: print what we're getting from Kundeinfo
+        print(f"🔍 Kundeinfo data fra Google Sheets:")
+        print(f"   Range: {DETAILS_RANGE}")
+        print(f"   Raw values: {details_values}")
+        
+        # Convert details into a dictionary for easy access
+        details = {row[0].strip(): row[1].strip() for row in details_values if len(row) > 1}
+        
+        print(f"   Processed details: {details}")
+        print(f"   Details keys: {list(details.keys())}")
+        print(f"   Kunde value: '{details.get('Kunde', 'NOT_FOUND')}'")
+        print(f"   Prosjekt value: '{details.get('Prosjekt', 'NOT_FOUND')}'")
+        print(f"   Versjon value: '{details.get('Versjon', 'NOT_FOUND')}'")
+        
+        # Debug: check for keys with trailing spaces
+        print(f"   Keys with trailing spaces:")
+        for key in details.keys():
+            if key != key.strip():
+                print(f"     '{key}' -> '{key.strip()}' (has trailing space)")
+            else:
+                print(f"     '{key}' (no trailing space)")
 
         # Fetch company info from Kundeinfo!D:E
         company_info_result = sheet.values().get(spreadsheetId=SPREADSHEET_ID, range="Kundeinfo!D:E").execute()
@@ -119,9 +141,6 @@ def fetch_google_data(SPREADSHEET_ID):
                 company_info[current_label] = row[1].strip() if len(row) > 1 and row[1].strip() else " "
             elif current_label and len(row) > 1:  # If the first column is empty, append to the current label
                 company_info[current_label] += f"\n{row[1].strip()}" if row[1].strip() else ""
-
-        # Convert details into a dictionary for easy access
-        details = {row[0].strip(): row[1].strip() for row in details_values if len(row) > 1}
 
         for row in sums_values:
             if len(row) > 2:  # Ensure row has A, B, and C values

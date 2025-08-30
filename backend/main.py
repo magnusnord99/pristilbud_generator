@@ -82,7 +82,7 @@ class PDFRequest(BaseModel):
     language: Literal["NO", "EN"]
     reise: Literal["y", "n"]
     mva: Literal["y", "n"]
-    discount_percent: float = Field(default=0, ge=0, le=100, description="Rabatt i prosent (0-100)")
+    discount_percent: Literal[0, 10, 15, 20, 25, 30, 40] = Field(default=0, description="Rabatt i prosent (0, 10, 15, 20, 25, 30, 40)")
 
 # Simple public health check (no auth required)
 @app.get("/health", response_model=HealthResponse)
@@ -251,10 +251,23 @@ def create_pdf(
         print(f"   Exception type: {type(ex).__name__}")
         raise HTTPException(status_code=502, detail=error_detail) from ex
 
+    # Debug: log what we're sending
+    print(f"🔍 Backend response headers:")
+    print(f"   Content-Disposition: attachment; filename=\"{filename}\"")
+    print(f"   Media type: application/pdf")
+    print(f"   Buffer size: {len(buffer.getvalue())} bytes")
+    
+    # Alternative: send filename in custom header
+    headers = {
+        "Content-Disposition": f'attachment; filename="{filename}"',
+        "X-Filename": filename,  # Custom header as backup
+        "Access-Control-Expose-Headers": "Content-Disposition, X-Filename"
+    }
+    
     return StreamingResponse(
         buffer,
         media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'}
+        headers=headers
     )
 
 # Test endpoint for creating first user (remove in production)

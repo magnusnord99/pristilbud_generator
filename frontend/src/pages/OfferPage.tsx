@@ -7,7 +7,7 @@ export default function OfferPage() {
   const [language, setLanguage] = useState<'NO' | 'EN'>('NO')
   const [reise, setReise] = useState<'y' | 'n'>('y')
   const [mva, setMva] = useState<'y' | 'n'>('y')
-  const [discountPercent, setDiscountPercent] = useState<number>(0)
+  const [discount, setDiscount] = useState<number>(0)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const { user, isAuthenticated } = useAuth()
@@ -38,7 +38,7 @@ export default function OfferPage() {
           language,
           reise,
           mva,
-          discount_percent: discountPercent
+          discount_percent: discount
         })
       })
 
@@ -58,14 +58,34 @@ export default function OfferPage() {
       
       // Get filename from response headers or use default
       const contentDisposition = response.headers.get('Content-Disposition')
+      const xFilename = response.headers.get('X-Filename')  // Backup header
       let filename = `pristilbud_${language}_${Date.now()}.pdf` // fallback
+      
+      // Debug: log what we're getting
+      console.log('🔍 Frontend filename debugging:')
+      console.log('   Content-Disposition header:', contentDisposition)
+      console.log('   X-Filename header:', xFilename)
+      console.log('   All response headers:', Object.fromEntries(response.headers.entries()))
+      console.log('   Fallback filename:', filename)
       
       if (contentDisposition) {
         const filenameMatch = contentDisposition.match(/filename="(.+)"/)
+        console.log('   Filename regex match:', filenameMatch)
         if (filenameMatch) {
           filename = filenameMatch[1]
+          console.log('   ✅ Using filename from Content-Disposition:', filename)
+        } else {
+          console.log('   ❌ No filename match found in Content-Disposition')
         }
+      } else if (xFilename) {
+        // Use backup header
+        filename = xFilename
+        console.log('   ✅ Using filename from X-Filename header:', filename)
+      } else {
+        console.log('   ❌ No filename headers found')
       }
+      
+      console.log('   Final filename to be used:', filename)
       
       a.download = filename
       document.body.appendChild(a)
@@ -109,7 +129,7 @@ export default function OfferPage() {
 
   return (
     <div style={{
-      backgroundColor: 'white',
+      backgroundColor: '#f8fafc',
       borderRadius: '16px',
       padding: '32px',
       boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
@@ -204,7 +224,10 @@ export default function OfferPage() {
                 borderRadius: '8px',
                 border: '1px solid #d1d5db',
                 fontSize: '1rem',
-                outline: 'none'
+                outline: 'none',
+                backgroundColor: '#1f2937',
+                color: 'white',
+                transition: 'border-color 0.2s ease'
               }}
             >
               <option value="NO">Norsk</option>
@@ -231,7 +254,10 @@ export default function OfferPage() {
                 borderRadius: '8px',
                 border: '1px solid #d1d5db',
                 fontSize: '1rem',
-                outline: 'none'
+                outline: 'none',
+                backgroundColor: '#1f2937',
+                color: 'white',
+                transition: 'border-color 0.2s ease'
               }}
             >
               <option value="y">Ja</option>
@@ -258,7 +284,10 @@ export default function OfferPage() {
                 borderRadius: '8px',
                 border: '1px solid #d1d5db',
                 fontSize: '1rem',
-                outline: 'none'
+                outline: 'none',
+                backgroundColor: '#1f2937',
+                color: 'white',
+                transition: 'border-color 0.2s ease'
               }}
             >
               <option value="y">Ja</option>
@@ -266,41 +295,33 @@ export default function OfferPage() {
             </select>
           </div>
 
-          <div>
-            <label style={{
-              display: 'block',
-              marginBottom: '8px',
-              fontWeight: '500',
-              color: '#2c3e50',
-              fontSize: '1rem'
-            }}>
-              Rabatt (%)
+          <div style={{ marginBottom: '20px' }}>
+            <label style={{ display: 'block', marginBottom: '8px', fontWeight: '500', color: '#2c3e50', fontSize: '1rem' }}>
+              Rabatt (%):
             </label>
-            <input
-              type="number"
-              min="0"
-              max="100"
-              step="0.1"
-              value={discountPercent}
-              onChange={(e) => setDiscountPercent(parseFloat(e.target.value) || 0)}
-              placeholder="0"
+            <select
+              value={discount}
+              onChange={(e) => setDiscount(Number(e.target.value))}
               style={{
                 width: '100%',
                 padding: '12px',
-                borderRadius: '8px',
                 border: '1px solid #d1d5db',
+                borderRadius: '8px',
                 fontSize: '1rem',
-                outline: 'none'
+                backgroundColor: '#1f2937',
+                color: 'white',
+                outline: 'none',
+                transition: 'border-color 0.2s ease'
               }}
-            />
-            <small style={{
-              color: '#6b7280',
-              fontSize: '0.875rem',
-              marginTop: '4px',
-              display: 'block'
-            }}>
-              Legg til rabatt i prosent (0-100). Produksjonskostnader får ikke rabatt.
-            </small>
+            >
+              <option value={0}>Ingen rabatt (0%)</option>
+              <option value={10}>10% rabatt</option>
+              <option value={15}>15% rabatt</option>
+              <option value={20}>20% rabatt</option>
+              <option value={25}>25% rabatt</option>
+              <option value={30}>30% rabatt</option>
+              <option value={40}>40% rabatt</option>
+            </select>
           </div>
         </div>
 
