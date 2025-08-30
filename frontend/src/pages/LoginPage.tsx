@@ -84,7 +84,7 @@ export default function LoginPage() {
         localStorage.setItem('refresh_token', authData.refresh_token)
         localStorage.setItem('user', JSON.stringify(authData.user))
         
-        setSuccess('Test innlogging vellykket! Omdirigerer...')
+        setSuccess('Test innlogging vellykket! Omdirigerer nå...')
         
         // Redirect to main page after successful login
         setTimeout(() => {
@@ -141,7 +141,7 @@ export default function LoginPage() {
           textAlign: 'center',
           marginTop: '20px'
         }}>
-          Logg inn
+          Logg inn nå
         </h1>
         
         <p style={{
