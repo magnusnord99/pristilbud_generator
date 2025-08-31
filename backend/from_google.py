@@ -63,16 +63,10 @@ def get_sheets_service():
         )
         return build("sheets", "v4", credentials=credentials_obj)
 
-    # Fallback to local credentials.json
-    if os.path.isfile(SERVICE_ACCOUNT_FILE):
-        credentials_obj = service_account.Credentials.from_service_account_file(
-            SERVICE_ACCOUNT_FILE, scopes=SCOPES
-        )
-        return build("sheets", "v4", credentials=credentials_obj)
-
+    # Remove fallback to local credentials.json - only use GitHub Secret
     raise FileNotFoundError(
-        "Google service account credentials not found. Set GOOGLE_APPLICATION_CREDENTIALS "
-        "to a valid file path or place credentials.json in the backend directory."
+        "Google service account credentials not found. Set GOOGLE_CREDENTIALS_JSON "
+        "environment variable with valid service account JSON."
     )
 
 # Function to fetch data
