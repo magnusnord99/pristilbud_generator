@@ -32,6 +32,8 @@ def get_sheets_service():
             # Debug: print first 100 chars to see what we're getting
             print(f"🔍 GOOGLE_CREDENTIALS_JSON preview: {creds_json[:100]}...")
             print(f"🔍 Length: {len(creds_json)}")
+            print(f"🔍 First 20 chars: {repr(creds_json[:20])}")
+            print(f"🔍 Last 20 chars: {repr(creds_json[-20:])}")
             
             # Try to decode as base64 first
             try:
