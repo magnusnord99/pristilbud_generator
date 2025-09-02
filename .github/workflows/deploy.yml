@@ -47,7 +47,7 @@ jobs:
       - name: Create backend env file for Cloud Run
         working-directory: backend
         run: |
-          echo "GOOGLE_CREDENTIALS_JSON: '${{ secrets.SHEETS_CREDENTIALS_JSON }}'" > .cloudrun.env.yaml
+          echo "GOOGLE_CREDENTIALS_JSON: '${{ secrets.GOOGLE_CREDENTIALS_JSON }}'" > .cloudrun.env.yaml
 
       - name: Deploy backend to Cloud Run
         working-directory: backend
