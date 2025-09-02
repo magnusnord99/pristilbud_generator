@@ -71,3 +71,4 @@ Tips:
 - Alternativt: Host frontend på Vercel/Netlify og sett `VITE_BACKEND_URL` der.
 - Ikke commit `credentials.json`. Bruk `GOOGLE_CREDENTIALS_JSON`.
 
+# Test deployment Tue Sep  2 12:54:48 CEST 2025
