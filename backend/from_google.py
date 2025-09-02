@@ -41,7 +41,8 @@ def get_sheets_service():
                 decoded_creds = base64.b64decode(creds_json).decode('utf-8')
                 print("✅ Successfully decoded base64 credentials")
                 info = json.loads(decoded_creds)
-            except:
+            except Exception as e:
+                print(f"🔄 Base64 failed: {e}")
                 # If base64 fails, try direct JSON
                 print("🔄 Trying direct JSON parsing")
                 info = json.loads(creds_json)
