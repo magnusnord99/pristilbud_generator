@@ -72,3 +72,4 @@ Tips:
 - Ikke commit `credentials.json`. Bruk `GOOGLE_CREDENTIALS_JSON`.
 
 # Test deployment Tue Sep  2 12:54:48 CEST 2025
+# Test base64 credentials Tue Sep  2 13:36:27 CEST 2025
