@@ -5,6 +5,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import Literal, List
 from write_to_pdf import generate_pdf
+from pdf_generators.price_quote import generate_pdf_from_data
+from services.quote_service import fetch_quote_data, prepare_quote_data_for_pdf
 import auth
 import database
 from models import (
@@ -12,7 +14,8 @@ from models import (
     CreateInvitationRequest, InvitationResponse, UseInvitationRequest,
     UserResponse, UserListResponse, PromoteUserRequest, DeleteUserRequest,
     HealthResponse, ProjectType, GenerateContentRequest, GeneratedContent,
-    ImageUploadResponse, ProjectDescriptionRequest, ProjectDescriptionResponse
+    ImageUploadResponse, ProjectDescriptionRequest, ProjectDescriptionResponse,
+    QuoteDataRequest, QuoteDataResponse, GeneratePDFFromDataRequest
 )
 from datetime import datetime
 from dotenv import load_dotenv
@@ -238,7 +241,7 @@ def create_pdf(
     """Generate PDF (requires authentication)"""
     try:
         # Check rate limit
-        auth.check_rate_limit_middleware(current_user["id"], "generate-pdf")
+        auth.check_rate_limit_middleware(current_user["id"], "generate-pdf", current_user)
         
         buffer, filename = generate_pdf(req.url, req.language, req.reise, req.mva, req.discount_percent)
     except ValueError as ve:
@@ -269,6 +272,103 @@ def create_pdf(
         media_type="application/pdf",
         headers=headers
     )
+
+# New structured API endpoints for quotes
+@app.post("/api/quotes/data", response_model=QuoteDataResponse)
+async def get_quote_data(
+    req: QuoteDataRequest,
+    current_user: dict = Depends(auth.get_current_user)
+):
+    """
+    Fetch quote data from Google Sheets and return as JSON
+    
+    This endpoint separates data retrieval from PDF generation,
+    allowing you to fetch data once and use it for both
+    interactive display and PDF generation.
+    """
+    try:
+        # Check rate limit
+        auth.check_rate_limit_middleware(current_user["id"], "fetch-quote-data", current_user)
+        
+        # Fetch data from Google Sheets
+        data = fetch_quote_data(req.url)
+        
+        # Convert grouped_sums from list of tuples to list of lists for JSON serialization
+        grouped_sums_list = [[item[0], item[1]] for item in data["grouped_sums"]]
+        
+        return QuoteDataResponse(
+            grouped_sums=grouped_sums_list,
+            total_days=data["total_days"],
+            post_prod_days=data["post_prod_days"],
+            pre_prod_days=data["pre_prod_days"],
+            details=data["details"],
+            company_info=data["company_info"],
+            total_excl_mva=data["total_excl_mva"],
+            total_incl_mva=data["total_incl_mva"],
+            sheet_id=data["sheet_id"]
+        )
+    except ValueError as ve:
+        raise HTTPException(status_code=400, detail=str(ve))
+    except Exception as ex:
+        error_detail = f"Kunne ikke hente data fra Google Sheets: {str(ex)}"
+        print(f"❌ Quote data fetch error: {error_detail}")
+        raise HTTPException(status_code=502, detail=error_detail) from ex
+
+
+@app.post("/api/quotes/pdf")
+async def generate_pdf_from_quote_data(
+    req: GeneratePDFFromDataRequest,
+    current_user: dict = Depends(auth.get_current_user)
+):
+    """
+    Generate PDF from quote data (JSON)
+    
+    Use this endpoint when you already have quote data from /api/quotes/data.
+    This avoids fetching data twice - fetch once, use for display, then generate PDF.
+    """
+    try:
+        # Check rate limit
+        auth.check_rate_limit_middleware(current_user["id"], "generate-pdf", current_user)
+        
+        # Convert grouped_sums from list of lists back to list of tuples
+        grouped_sums_tuples = [(item[0], item[1]) for item in req.data.grouped_sums]
+        
+        # Prepare data dictionary
+        pdf_data = {
+            "grouped_sums": grouped_sums_tuples,
+            "total_days": req.data.total_days,
+            "post_prod_days": req.data.post_prod_days,
+            "pre_prod_days": req.data.pre_prod_days,
+            "details": req.data.details,
+            "company_info": req.data.company_info,
+            "total_excl_mva": req.data.total_excl_mva,
+            "total_incl_mva": req.data.total_incl_mva,
+        }
+        
+        # Generate PDF
+        buffer, filename = generate_pdf_from_data(
+            pdf_data,
+            req.language,
+            req.reise,
+            req.mva,
+            req.discount_percent
+        )
+        
+        headers = {
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "X-Filename": filename,
+            "Access-Control-Expose-Headers": "Content-Disposition, X-Filename"
+        }
+        
+        return StreamingResponse(
+            buffer,
+            media_type="application/pdf",
+            headers=headers
+        )
+    except Exception as ex:
+        error_detail = f"Kunne ikke generere PDF: {str(ex)}"
+        print(f"❌ PDF generation error: {error_detail}")
+        raise HTTPException(status_code=500, detail=error_detail) from ex
 
 # Test endpoint for creating first user (remove in production)
 @app.post("/test/create-first-user")
@@ -379,6 +479,37 @@ async def test_auth():
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Test authentication failed: {str(e)}")
+
+# API Key management endpoint (admin only)
+@app.get("/admin/api-key")
+async def get_api_key_info(current_admin: dict = Depends(auth.get_current_admin_user)):
+    """Get information about API key configuration (admin only)"""
+    api_key_configured = bool(os.getenv("API_KEY") or os.getenv("QUOTE_API_TOKEN"))
+    
+    if api_key_configured:
+        return {
+            "message": "API key is configured",
+            "note": "Use the API key from your environment variable (API_KEY or QUOTE_API_TOKEN) as Bearer token for server-side authentication"
+        }
+    else:
+        return {
+            "message": "API key is not configured",
+            "instructions": "Set API_KEY or QUOTE_API_TOKEN environment variable to enable server-side API authentication",
+            "example": "API_KEY=your-secret-api-key-here"
+        }
+
+@app.post("/admin/generate-api-key")
+async def generate_api_key(current_admin: dict = Depends(auth.get_current_admin_user)):
+    """Generate a new API key for server-side use (admin only)"""
+    import secrets
+    new_api_key = secrets.token_urlsafe(32)
+    
+    return {
+        "api_key": new_api_key,
+        "message": "Save this API key securely. It will not be shown again.",
+        "usage": "Use this as QUOTE_API_TOKEN in your Next.js .env.local file",
+        "header_format": f"Authorization: Bearer {new_api_key}"
+    }
 
 # Project Description endpoints
 @app.get("/project-types", response_model=List[ProjectType])

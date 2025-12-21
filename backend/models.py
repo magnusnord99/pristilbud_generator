@@ -101,3 +101,28 @@ class ProjectDescriptionResponse(BaseModel):
     pdf_url: str
     project_id: str
     created_at: datetime
+
+# Quote Data models
+class QuoteDataResponse(BaseModel):
+    """Response model for quote data"""
+    grouped_sums: List[List]  # List of [category: str, amount: float] lists
+    total_days: Optional[float] = None
+    post_prod_days: Optional[float] = None
+    pre_prod_days: Optional[float] = None
+    details: dict
+    company_info: dict
+    total_excl_mva: Optional[float] = None
+    total_incl_mva: Optional[float] = None
+    sheet_id: str
+
+class QuoteDataRequest(BaseModel):
+    """Request model for fetching quote data"""
+    url: str = Field(min_length=10, description="Google Sheets URL")
+
+class GeneratePDFFromDataRequest(BaseModel):
+    """Request model for generating PDF from data"""
+    data: QuoteDataResponse
+    language: Literal["NO", "EN"] = "NO"
+    reise: Literal["y", "n"] = "n"
+    mva: Literal["y", "n"] = "n"
+    discount_percent: Literal[0, 10, 15, 20, 25, 30, 40] = Field(default=0, description="Rabatt i prosent")

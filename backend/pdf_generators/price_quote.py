@@ -3,7 +3,6 @@ from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from reportlab.lib.utils import simpleSplit
 from io import BytesIO
-import from_google
 from .common import BASE_DIR, LOGO_PATH, _sanitize_filename, _extract_sheet_id
 
 
@@ -262,12 +261,26 @@ def _totals_block(c, language, total_excl_mva, total_incl_mva, mva, discount_per
     return y
 
 
-def generate_pdf(google_url: str, language: str, reise: str, mva: str, discount_percent: float = 0):
+def generate_pdf_from_data(
+    data: dict,
+    language: str,
+    reise: str,
+    mva: str,
+    discount_percent: float = 0
+):
     """
-    Generate price quote PDF
+    Generate price quote PDF from data dictionary
     
     Args:
-        google_url: Google Sheets URL
+        data: Dictionary containing quote data with keys:
+            - grouped_sums: List of (category, amount) tuples
+            - total_days: int or float
+            - post_prod_days: int or float
+            - pre_prod_days: int or float
+            - details: Dict of customer/project details
+            - company_info: Dict of company information
+            - total_excl_mva: float
+            - total_incl_mva: float
         language: 'NO' eller 'EN'
         reise: 'y' eller 'n'
         mva: 'y' eller 'n'
@@ -280,10 +293,7 @@ def generate_pdf(google_url: str, language: str, reise: str, mva: str, discount_
     reise = (reise or "n").lower()
     mva = (mva or "n").lower()
 
-    sheet_id = _extract_sheet_id(google_url)
-
-    # Hent data fra Google
-    data = from_google.fetch_google_data(SPREADSHEET_ID=sheet_id)
+    # Extract data
     grouped_sums = data["grouped_sums"]
     total_days = data["total_days"]
     post_prod_days = data["post_prod_days"]
@@ -293,8 +303,8 @@ def generate_pdf(google_url: str, language: str, reise: str, mva: str, discount_
     total_excl_mva = data["total_excl_mva"]
     total_incl_mva = data["total_incl_mva"]
     
-    # Debug: print what we got from Google Sheets
-    print(f"🔍 generate_pdf - Data fra Google Sheets:")
+    # Debug: print what we got
+    print(f"🔍 generate_pdf_from_data - Data:")
     print(f"   Details: {details}")
     print(f"   Details type: {type(details)}")
     print(f"   Details keys: {list(details.keys()) if isinstance(details, dict) else 'NOT_DICT'}")
@@ -305,7 +315,7 @@ def generate_pdf(google_url: str, language: str, reise: str, mva: str, discount_
     versjon = details.get("Versjon", "v0")
     
     # Debug: print what we're getting
-    print(f"🔍 Filnavn data fra Google Sheets:")
+    print(f"🔍 Filnavn data:")
     print(f"   Kunde: '{kunde}'")
     print(f"   Prosjekt: '{prosjekt}'")
     print(f"   Versjon: '{versjon}'")
@@ -340,3 +350,32 @@ def generate_pdf(google_url: str, language: str, reise: str, mva: str, discount_
     c.save()
     buf.seek(0)
     return buf, filename
+
+
+def generate_pdf(google_url: str, language: str, reise: str, mva: str, discount_percent: float = 0):
+    """
+    Generate price quote PDF from Google Sheets URL (backward compatibility)
+    
+    Args:
+        google_url: Google Sheets URL
+        language: 'NO' eller 'EN'
+        reise: 'y' eller 'n'
+        mva: 'y' eller 'n'
+        discount_percent: Rabatt i prosent (0-100), standard 0
+    
+    Returns:
+        Tuple of (BytesIO buffer, filename)
+    """
+    # Import here to avoid circular dependency
+    from services.quote_service import fetch_quote_data, prepare_quote_data_for_pdf
+    
+    sheet_id = _extract_sheet_id(google_url)
+    
+    # Hent data fra Google
+    data = fetch_quote_data(google_url)
+    
+    # Prepare data for PDF generation
+    pdf_data = prepare_quote_data_for_pdf(data)
+    
+    # Generate PDF from data
+    return generate_pdf_from_data(pdf_data, language, reise, mva, discount_percent)

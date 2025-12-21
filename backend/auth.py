@@ -22,6 +22,9 @@ REFRESH_TOKEN_EXPIRE_DAYS = 7
 # Google OAuth configuration
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "your-google-client-id")
 
+# API Key for server-side authentication (Next.js, etc.)
+API_KEY = os.getenv("API_KEY", os.getenv("QUOTE_API_TOKEN"))
+
 # Rate limiting configuration
 RATE_LIMITS = {
     "generate-pdf": {"max_requests": 100, "window_minutes": 60},  # 100 PDFs per hour
@@ -66,9 +69,31 @@ def verify_google_token(token: str) -> Optional[Dict[str, Any]]:
     except ValueError:
         return None
 
+def verify_api_key(token: str) -> bool:
+    """Verify API key for server-side authentication"""
+    if not API_KEY:
+        return False
+    return secrets.compare_digest(token, API_KEY)
+
 def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> Dict[str, Any]:
-    """Get current user from JWT token"""
+    """Get current user from JWT token or API key"""
     token = credentials.credentials
+    
+    # First check if it's an API key (server-side)
+    if API_KEY and verify_api_key(token):
+        # Return a service user dict for API key authentication
+        # This allows server-side calls without a real user
+        return {
+            "id": 0,  # Service account
+            "email": "api@service",
+            "name": "API Service",
+            "role": "admin",
+            "is_active": True,
+            "created_at": datetime.utcnow(),
+            "is_api_key": True  # Flag to indicate API key auth
+        }
+    
+    # Otherwise verify as JWT token
     payload = verify_token(token)
     
     if payload is None:
@@ -109,8 +134,12 @@ def generate_invitation_code() -> str:
     """Generate a unique invitation code"""
     return secrets.token_urlsafe(16)
 
-def check_rate_limit_middleware(user_id: int, endpoint: str):
+def check_rate_limit_middleware(user_id: int, endpoint: str, user: Optional[Dict[str, Any]] = None):
     """Check rate limit for a specific endpoint"""
+    # Skip rate limiting for API key authentication (server-side)
+    if user and user.get("is_api_key"):
+        return
+    
     rate_limit_config = RATE_LIMITS.get(endpoint, RATE_LIMITS["default"])
     
     if not database.check_rate_limit(
