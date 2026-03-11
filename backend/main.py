@@ -6,7 +6,6 @@ from pydantic import BaseModel, Field
 from typing import Literal, List
 from write_to_pdf import generate_pdf
 from pdf_generators.price_quote import generate_pdf_from_data
-from services.quote_service import fetch_quote_data, prepare_quote_data_for_pdf
 import auth
 import database
 from models import (
@@ -15,7 +14,9 @@ from models import (
     UserResponse, UserListResponse, PromoteUserRequest, DeleteUserRequest,
     HealthResponse, ProjectType, GenerateContentRequest, GeneratedContent,
     ImageUploadResponse, ProjectDescriptionRequest, ProjectDescriptionResponse,
-    QuoteDataRequest, QuoteDataResponse, GeneratePDFFromDataRequest
+    QuoteDataRequest, QuoteDataResponse, GeneratePDFFromDataRequest,
+    CreateCustomerRequest, UpdateCustomerRequest, CustomerResponse, CustomerListResponse,
+    CreateProjectRequest, UpdateProjectRequest, ProjectResponse, ProjectListResponse, ProjectOverviewResponse
 )
 from datetime import datetime
 from dotenv import load_dotenv
@@ -287,6 +288,9 @@ async def get_quote_data(
     interactive display and PDF generation.
     """
     try:
+        # Import here to avoid startup issues
+        from services.quote_service import fetch_quote_data, prepare_quote_data_for_pdf
+        
         # Check rate limit
         auth.check_rate_limit_middleware(current_user["id"], "fetch-quote-data", current_user)
         
@@ -327,22 +331,26 @@ async def generate_pdf_from_quote_data(
     This avoids fetching data twice - fetch once, use for display, then generate PDF.
     """
     try:
+        # Import here to avoid startup issues
+        from services.quote_service import prepare_quote_data_for_pdf
+        
         # Check rate limit
         auth.check_rate_limit_middleware(current_user["id"], "generate-pdf", current_user)
         
         # Convert grouped_sums from list of lists back to list of tuples
-        grouped_sums_tuples = [(item[0], item[1]) for item in req.data.grouped_sums]
+        data_dict = req.data if isinstance(req.data, dict) else req.data.dict()
+        grouped_sums_tuples = [(item[0], item[1]) for item in data_dict.get("grouped_sums", [])]
         
         # Prepare data dictionary
         pdf_data = {
             "grouped_sums": grouped_sums_tuples,
-            "total_days": req.data.total_days,
-            "post_prod_days": req.data.post_prod_days,
-            "pre_prod_days": req.data.pre_prod_days,
-            "details": req.data.details,
-            "company_info": req.data.company_info,
-            "total_excl_mva": req.data.total_excl_mva,
-            "total_incl_mva": req.data.total_incl_mva,
+            "total_days": data_dict.get("total_days"),
+            "post_prod_days": data_dict.get("post_prod_days"),
+            "pre_prod_days": data_dict.get("pre_prod_days"),
+            "details": data_dict.get("details", {}),
+            "company_info": data_dict.get("company_info", {}),
+            "total_excl_mva": data_dict.get("total_excl_mva"),
+            "total_incl_mva": data_dict.get("total_incl_mva"),
         }
         
         # Generate PDF
@@ -510,6 +518,160 @@ async def generate_api_key(current_admin: dict = Depends(auth.get_current_admin_
         "usage": "Use this as QUOTE_API_TOKEN in your Next.js .env.local file",
         "header_format": f"Authorization: Bearer {new_api_key}"
     }
+
+# Customer endpoints
+@app.post("/api/customers", response_model=CustomerResponse)
+async def create_customer(
+    req: CreateCustomerRequest,
+    current_user: dict = Depends(auth.get_current_user)
+):
+    """Create a new customer"""
+    try:
+        customer_id = database.create_customer(
+            name=req.name,
+            email=req.email,
+            company=req.company,
+            phone=req.phone,
+            address=req.address,
+            notes=req.notes,
+            created_by=current_user["id"]
+        )
+        customer = database.get_customer_by_id(customer_id)
+        if not customer:
+            raise HTTPException(status_code=500, detail="Failed to retrieve created customer")
+        return customer
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/api/customers", response_model=CustomerListResponse)
+async def get_all_customers(current_user: dict = Depends(auth.get_current_user)):
+    """Get all customers"""
+    try:
+        customers = database.get_all_customers()
+        return CustomerListResponse(customers=customers)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/customers/{customer_id}", response_model=CustomerResponse)
+async def get_customer(
+    customer_id: int,
+    current_user: dict = Depends(auth.get_current_user)
+):
+    """Get customer by ID"""
+    customer = database.get_customer_by_id(customer_id)
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    return customer
+
+@app.put("/api/customers/{customer_id}", response_model=CustomerResponse)
+async def update_customer(
+    customer_id: int,
+    req: UpdateCustomerRequest,
+    current_user: dict = Depends(auth.get_current_user)
+):
+    """Update customer information"""
+    customer = database.get_customer_by_id(customer_id)
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    
+    update_data = req.dict(exclude_unset=True)
+    if update_data:
+        database.update_customer(customer_id, **update_data)
+        customer = database.get_customer_by_id(customer_id)
+    
+    return customer
+
+# Project endpoints
+@app.post("/api/projects", response_model=ProjectResponse)
+async def create_project(
+    req: CreateProjectRequest,
+    current_user: dict = Depends(auth.get_current_user)
+):
+    """Create a new project"""
+    # Verify customer exists
+    customer = database.get_customer_by_id(req.customer_id)
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    
+    try:
+        project_id = database.create_project(
+            customer_id=req.customer_id,
+            name=req.name,
+            description=req.description,
+            status=req.status,
+            created_by=current_user["id"]
+        )
+        project = database.get_project_by_id(project_id)
+        if not project:
+            raise HTTPException(status_code=500, detail="Failed to retrieve created project")
+        return project
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/api/projects", response_model=ProjectListResponse)
+async def get_all_projects(current_user: dict = Depends(auth.get_current_user)):
+    """Get all projects"""
+    try:
+        projects = database.get_all_projects()
+        return ProjectListResponse(projects=projects)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/customers/{customer_id}/projects", response_model=ProjectListResponse)
+async def get_customer_projects(
+    customer_id: int,
+    current_user: dict = Depends(auth.get_current_user)
+):
+    """Get all projects for a customer"""
+    customer = database.get_customer_by_id(customer_id)
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    
+    try:
+        projects = database.get_projects_by_customer(customer_id)
+        return ProjectListResponse(projects=projects)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/projects/{project_id}", response_model=ProjectResponse)
+async def get_project(
+    project_id: int,
+    current_user: dict = Depends(auth.get_current_user)
+):
+    """Get project by ID"""
+    project = database.get_project_by_id(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return project
+
+@app.get("/api/projects/{project_id}/overview", response_model=ProjectOverviewResponse)
+async def get_project_overview(
+    project_id: int,
+    current_user: dict = Depends(auth.get_current_user)
+):
+    """Get complete project overview with customer, quotes, contracts, and descriptions"""
+    overview = database.get_project_overview(project_id)
+    if not overview:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return overview
+
+@app.put("/api/projects/{project_id}", response_model=ProjectResponse)
+async def update_project(
+    project_id: int,
+    req: UpdateProjectRequest,
+    current_user: dict = Depends(auth.get_current_user)
+):
+    """Update project information"""
+    project = database.get_project_by_id(project_id)
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    
+    update_data = req.dict(exclude_unset=True)
+    if update_data:
+        database.update_project(project_id, **update_data)
+        project = database.get_project_by_id(project_id)
+    
+    return project
 
 # Project Description endpoints
 @app.get("/project-types", response_model=List[ProjectType])

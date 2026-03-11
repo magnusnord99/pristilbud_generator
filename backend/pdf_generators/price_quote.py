@@ -213,50 +213,45 @@ def _totals_block(c, language, total_excl_mva, total_incl_mva, mva, discount_per
 
     # Add discount section if discount is applied
     if discount_percent and discount_percent > 0:
-        # Calculate discount amount (excluding production costs)
-        base_amount = total_incl_mva if (mva == "y" and total_incl_mva) else total_excl_mva
-        if base_amount:
-            # Calculate discount based on individual line items (excluding production costs)
-            discountable_amount = 0
-            for unit, total in grouped_sums:
-                if unit not in ["Produksjon totalt eksl. mva", "Produksjon totalt inkl. mva", "Produksjonsutgifter", "Production expenses", "Fly", "Flight", "Overnatting", "Accommodation", "Dagpenger", "Per diem", "Transport", "Reise", "Travel"]:
-                    discountable_amount += total
-            
-            # Apply discount only to discountable items
-            discount_amount = discountable_amount * (discount_percent / 100)
-            final_amount = base_amount - discount_amount
-            
-            # Draw discount line
+        # Calculate discount based on line items (excl. MVA - production costs excluded)
+        discountable_amount = 0
+        for unit, total in grouped_sums:
+            if unit not in ["Produksjon totalt eksl. mva", "Produksjon totalt inkl. mva", "Produksjonsutgifter", "Production expenses", "Fly", "Flight", "Overnatting", "Accommodation", "Dagpenger", "Per diem", "Transport", "Reise", "Travel"]:
+                discountable_amount += total
+
+        discount_amount_excl_mva = discountable_amount * (discount_percent / 100)
+        final_amount_excl_mva = (total_excl_mva - discount_amount_excl_mva) if total_excl_mva else None
+
+        # Ny pris inkl. MVA = Ny pris eksl. MVA * MVA-faktor (ikke total_incl_mva - rabatt)
+        # Rabatten er beregnet på ekskl. MVA-beløp, så vi må først få ny pris ekskl., deretter legge på MVA
+        if total_excl_mva and total_excl_mva > 0 and total_incl_mva:
+            mva_ratio = total_incl_mva / total_excl_mva
+            final_amount_incl_mva = final_amount_excl_mva * mva_ratio
+        else:
+            final_amount_incl_mva = final_amount_excl_mva
+
+        if total_excl_mva:
+            # Draw discount line (rabatt i ekskl. MVA-termer)
             c.setFont("Helvetica", 10)
             discount_lbl = f"{discount_percent}% rabatt:" if language == "NO" else f"{discount_percent}% discount:"
             c.drawString(50, y, discount_lbl)
-            c.drawRightString(472, y, f"-{discount_amount:,.2f} NOK")
+            c.drawRightString(472, y, f"-{discount_amount_excl_mva:,.2f} NOK")
             y -= 15
-            
-            
-            # Also show final amount without MVA if MVA is included
-            if mva == "y" and total_excl_mva:
-                # Calculate discount on amount without MVA
-                discountable_amount_excl_mva = 0
-                for unit, total in grouped_sums:
-                    if unit not in ["Produksjon totalt eksl. mva", "Produksjon totalt inkl. mva", "Produksjonsutgifter", "Production expenses", "Fly", "Flight", "Overnatting", "Accommodation", "Dagpenger", "Per diem", "Transport", "Reise", "Travel"]:
-                        discountable_amount_excl_mva += total
-                
-                discount_amount_excl_mva = discountable_amount_excl_mva * (discount_percent / 100)
-                final_amount_excl_mva = total_excl_mva - discount_amount_excl_mva
-                
-                c.setFont("Helvetica-Bold", 10)
-                final_excl_mva_lbl = "Ny pris eksl. MVA:" if language == "NO" else "New price excl. VAT:"
-                c.drawString(50, y, final_excl_mva_lbl)
-                c.drawRightString(472, y, f"{final_amount_excl_mva:,.2f} NOK")
-                y -= 15
-            
-            # Draw final amount (with MVA if applicable)
+
+            # Ny pris eksl. MVA
             c.setFont("Helvetica-Bold", 10)
-            final_lbl = "Ny pris inkl. MVA:" if language == "NO" else "New price incl. VAT:"
-            c.drawString(50, y, final_lbl)
-            c.drawRightString(472, y, f"{final_amount:,.2f} NOK")
-            y -= 20
+            final_excl_mva_lbl = "Ny pris eksl. MVA:" if language == "NO" else "New price excl. VAT:"
+            c.drawString(50, y, final_excl_mva_lbl)
+            c.drawRightString(472, y, f"{final_amount_excl_mva:,.2f} NOK")
+            y -= 15
+
+            # Ny pris inkl. MVA (MVA lagt på den rabatterte prisen)
+            if mva == "y" and total_incl_mva:
+                c.setFont("Helvetica-Bold", 10)
+                final_lbl = "Ny pris inkl. MVA:" if language == "NO" else "New price incl. VAT:"
+                c.drawString(50, y, final_lbl)
+                c.drawRightString(472, y, f"{final_amount_incl_mva:,.2f} NOK")
+                y -= 20
 
     return y
 

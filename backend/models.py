@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from typing import Optional, List, Literal
 from datetime import datetime
 
@@ -121,8 +121,79 @@ class QuoteDataRequest(BaseModel):
 
 class GeneratePDFFromDataRequest(BaseModel):
     """Request model for generating PDF from data"""
-    data: QuoteDataResponse
+    data: dict  # Changed from QuoteDataResponse to dict to avoid potential validation issues
     language: Literal["NO", "EN"] = "NO"
     reise: Literal["y", "n"] = "n"
     mva: Literal["y", "n"] = "n"
     discount_percent: Literal[0, 10, 15, 20, 25, 30, 40] = Field(default=0, description="Rabatt i prosent")
+
+# Customer models
+class CreateCustomerRequest(BaseModel):
+    """Request model for creating a customer"""
+    name: str = Field(min_length=1, description="Kundenavn")
+    email: Optional[EmailStr] = None
+    company: Optional[str] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None
+    notes: Optional[str] = None
+
+class UpdateCustomerRequest(BaseModel):
+    """Request model for updating a customer"""
+    name: Optional[str] = None
+    email: Optional[EmailStr] = None
+    company: Optional[str] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None
+    notes: Optional[str] = None
+
+class CustomerResponse(BaseModel):
+    """Response model for customer"""
+    id: int
+    name: str
+    email: Optional[str] = None
+    company: Optional[str] = None
+    phone: Optional[str] = None
+    address: Optional[str] = None
+    notes: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+class CustomerListResponse(BaseModel):
+    """Response model for customer list"""
+    customers: List[CustomerResponse]
+
+# Project models
+class CreateProjectRequest(BaseModel):
+    """Request model for creating a project"""
+    customer_id: int
+    name: str = Field(min_length=1, description="Prosjektnavn")
+    description: Optional[str] = None
+    status: Literal["active", "completed", "cancelled", "on_hold"] = "active"
+
+class UpdateProjectRequest(BaseModel):
+    """Request model for updating a project"""
+    name: Optional[str] = None
+    description: Optional[str] = None
+    status: Optional[Literal["active", "completed", "cancelled", "on_hold"]] = None
+
+class ProjectResponse(BaseModel):
+    """Response model for project"""
+    id: int
+    customer_id: int
+    name: str
+    description: Optional[str] = None
+    status: str
+    created_at: datetime
+    updated_at: datetime
+
+class ProjectListResponse(BaseModel):
+    """Response model for project list"""
+    projects: List[ProjectResponse]
+
+class ProjectOverviewResponse(BaseModel):
+    """Response model for complete project overview"""
+    project: ProjectResponse
+    customer: Optional[CustomerResponse] = None
+    quotes: List[dict] = []
+    contracts: List[dict] = []
+    description: Optional[dict] = None
