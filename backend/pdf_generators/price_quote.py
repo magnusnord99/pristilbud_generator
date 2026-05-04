@@ -6,6 +6,23 @@ from io import BytesIO
 from .common import BASE_DIR, LOGO_PATH, _sanitize_filename, _extract_sheet_id
 
 
+def _get_exchange_rate(to_currency: str) -> float:
+    """Fetch NOK exchange rate. Falls back to hardcoded rate on failure."""
+    if to_currency == "NOK":
+        return 1.0
+    fallback = {"EUR": 0.087}
+    try:
+        import requests
+        resp = requests.get(
+            f"https://api.frankfurter.app/latest?from=NOK&to={to_currency}",
+            timeout=5
+        )
+        resp.raise_for_status()
+        return resp.json()["rates"][to_currency]
+    except Exception:
+        return fallback.get(to_currency, 1.0)
+
+
 def _header_and_company_block(c, details, company_info, y_start):
     """Draw header with company information and logo"""
     c.setFont("Helvetica", 11)
@@ -332,6 +349,15 @@ def generate_pdf_from_data(
     filename = f"{base}_{kunde_clean}_{prosjekt_clean}_{versjon_clean}_@leafilms.pdf"
     
     print(f"🔍 Final filename: '{filename}'")
+
+    # Konverter priser hvis valuta ikke er NOK
+    if currency != "NOK":
+        rate = _get_exchange_rate(currency)
+        grouped_sums = [(cat, amt * rate) for cat, amt in grouped_sums]
+        if total_excl_mva is not None:
+            total_excl_mva = total_excl_mva * rate
+        if total_incl_mva is not None:
+            total_incl_mva = total_incl_mva * rate
 
     # Lag PDF i minnet
     buf = BytesIO()
