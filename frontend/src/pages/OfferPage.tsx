@@ -8,6 +8,7 @@ export default function OfferPage() {
   const [reise, setReise] = useState<'y' | 'n'>('y')
   const [mva, setMva] = useState<'y' | 'n'>('y')
   const [discount, setDiscount] = useState<number>(0)
+  const [currency, setCurrency] = useState<'NOK' | 'EUR'>('NOK')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const { user, isAuthenticated } = useAuth()
@@ -38,7 +39,8 @@ export default function OfferPage() {
           language,
           reise,
           mva,
-          discount_percent: discount
+          discount_percent: discount,
+          currency
         })
       })
 
@@ -98,6 +100,7 @@ export default function OfferPage() {
       setLanguage('NO')
       setReise('y')
       setMva('y')
+      setCurrency('NOK')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'En feil oppstod')
     } finally {
@@ -321,6 +324,36 @@ export default function OfferPage() {
               <option value={25}>25% rabatt</option>
               <option value={30}>30% rabatt</option>
               <option value={40}>40% rabatt</option>
+            </select>
+          </div>
+
+          <div>
+            <label style={{
+              display: 'block',
+              marginBottom: '8px',
+              fontWeight: '500',
+              color: '#2c3e50',
+              fontSize: '1rem'
+            }}>
+              Valuta
+            </label>
+            <select
+              value={currency}
+              onChange={(e) => setCurrency(e.target.value as 'NOK' | 'EUR')}
+              style={{
+                width: '100%',
+                padding: '12px',
+                borderRadius: '8px',
+                border: '1px solid #d1d5db',
+                fontSize: '1rem',
+                outline: 'none',
+                backgroundColor: '#1f2937',
+                color: 'white',
+                transition: 'border-color 0.2s ease'
+              }}
+            >
+              <option value="NOK">NOK (Norske kroner)</option>
+              <option value="EUR">EUR (Euro)</option>
             </select>
           </div>
         </div>

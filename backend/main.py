@@ -87,6 +87,7 @@ class PDFRequest(BaseModel):
     reise: Literal["y", "n"]
     mva: Literal["y", "n"]
     discount_percent: Literal[0, 10, 15, 20, 25, 30, 40] = Field(default=0, description="Rabatt i prosent (0, 10, 15, 20, 25, 30, 40)")
+    currency: Literal["NOK", "EUR"] = "NOK"
 
 # Simple public health check (no auth required)
 @app.get("/health", response_model=HealthResponse)
@@ -244,7 +245,7 @@ def create_pdf(
         # Check rate limit
         auth.check_rate_limit_middleware(current_user["id"], "generate-pdf", current_user)
         
-        buffer, filename = generate_pdf(req.url, req.language, req.reise, req.mva, req.discount_percent)
+        buffer, filename = generate_pdf(req.url, req.language, req.reise, req.mva, req.discount_percent, req.currency)
     except ValueError as ve:
         # e.g., invalid URL format
         raise HTTPException(status_code=400, detail=str(ve))
@@ -359,7 +360,8 @@ async def generate_pdf_from_quote_data(
             req.language,
             req.reise,
             req.mva,
-            req.discount_percent
+            req.discount_percent,
+            req.currency
         )
         
         headers = {

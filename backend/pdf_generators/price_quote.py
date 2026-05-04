@@ -149,13 +149,13 @@ def _terms_block(c, language, reise, y):
     return max(y, 60)  # unngå å gå for lavt
 
 
-def _table_block(c, language, grouped_sums, total_days, post_prod_days, pre_prod_days, discount_percent, y):
+def _table_block(c, language, grouped_sums, total_days, post_prod_days, pre_prod_days, discount_percent, currency, y):
     """Draw pricing table block with discount"""
     # Tabellheaders
     c.setFont("Helvetica-Oblique", 10)
     c.drawString(50, y, "Beskrivelse" if language == "NO" else "Description")
     c.drawString(250, y, "Antall" if language == "NO" else "Quantity")
-    c.drawString(400, y, "Sum (NOK)")
+    c.drawString(400, y, f"Sum ({currency})")
     if discount_percent > 0:
         c.drawString(500, y, f"Rabatt ({discount_percent}%)" if language == "NO" else f"Discount ({discount_percent}%)")
     y -= 15
@@ -195,20 +195,20 @@ def _table_block(c, language, grouped_sums, total_days, post_prod_days, pre_prod
     return y
 
 
-def _totals_block(c, language, total_excl_mva, total_incl_mva, mva, discount_percent, grouped_sums, y):
+def _totals_block(c, language, total_excl_mva, total_incl_mva, mva, discount_percent, grouped_sums, currency, y):
     """Draw totals block with discount"""
     c.setFont("Helvetica-Bold", 10)
 
     if total_excl_mva is not None:
         lbl = "Produksjon totalt eksl. mva:" if language == "NO" else "Production total (excl. VAT):"
         c.drawString(50, y, lbl)
-        c.drawRightString(472, y, f"{total_excl_mva:,.2f} NOK")
+        c.drawRightString(472, y, f"{total_excl_mva:,.2f} {currency}")
         y -= 15
 
     if (mva == "y") and (total_incl_mva is not None):
         lbl = "Produksjon totalt inkl. mva:" if language == "NO" else "Production total (incl. VAT):"
         c.drawString(50, y, lbl)
-        c.drawRightString(472, y, f"{total_incl_mva:,.2f} NOK")
+        c.drawRightString(472, y, f"{total_incl_mva:,.2f} {currency}")
         y -= 15
 
     # Add discount section if discount is applied
@@ -235,14 +235,14 @@ def _totals_block(c, language, total_excl_mva, total_incl_mva, mva, discount_per
             c.setFont("Helvetica", 10)
             discount_lbl = f"{discount_percent}% rabatt:" if language == "NO" else f"{discount_percent}% discount:"
             c.drawString(50, y, discount_lbl)
-            c.drawRightString(472, y, f"-{discount_amount_excl_mva:,.2f} NOK")
+            c.drawRightString(472, y, f"-{discount_amount_excl_mva:,.2f} {currency}")
             y -= 15
 
             # Ny pris eksl. MVA
             c.setFont("Helvetica-Bold", 10)
             final_excl_mva_lbl = "Ny pris eksl. MVA:" if language == "NO" else "New price excl. VAT:"
             c.drawString(50, y, final_excl_mva_lbl)
-            c.drawRightString(472, y, f"{final_amount_excl_mva:,.2f} NOK")
+            c.drawRightString(472, y, f"{final_amount_excl_mva:,.2f} {currency}")
             y -= 15
 
             # Ny pris inkl. MVA (MVA lagt på den rabatterte prisen)
@@ -250,7 +250,7 @@ def _totals_block(c, language, total_excl_mva, total_incl_mva, mva, discount_per
                 c.setFont("Helvetica-Bold", 10)
                 final_lbl = "Ny pris inkl. MVA:" if language == "NO" else "New price incl. VAT:"
                 c.drawString(50, y, final_lbl)
-                c.drawRightString(472, y, f"{final_amount_incl_mva:,.2f} NOK")
+                c.drawRightString(472, y, f"{final_amount_incl_mva:,.2f} {currency}")
                 y -= 20
 
     return y
@@ -261,7 +261,8 @@ def generate_pdf_from_data(
     language: str,
     reise: str,
     mva: str,
-    discount_percent: float = 0
+    discount_percent: float = 0,
+    currency: str = "NOK"
 ):
     """
     Generate price quote PDF from data dictionary
@@ -339,15 +340,15 @@ def generate_pdf_from_data(
     y = _header_and_company_block(c, details, company_info, y_start=800)
     _offer_block(c, language, details, y)
     y = _terms_block(c, language, reise, y)
-    y = _table_block(c, language, grouped_sums, total_days, post_prod_days, pre_prod_days, discount_percent, y)
-    _totals_block(c, language, total_excl_mva, total_incl_mva, mva, discount_percent, grouped_sums, y)
+    y = _table_block(c, language, grouped_sums, total_days, post_prod_days, pre_prod_days, discount_percent, currency, y)
+    _totals_block(c, language, total_excl_mva, total_incl_mva, mva, discount_percent, grouped_sums, currency, y)
 
     c.save()
     buf.seek(0)
     return buf, filename
 
 
-def generate_pdf(google_url: str, language: str, reise: str, mva: str, discount_percent: float = 0):
+def generate_pdf(google_url: str, language: str, reise: str, mva: str, discount_percent: float = 0, currency: str = "NOK"):
     """
     Generate price quote PDF from Google Sheets URL (backward compatibility)
     
@@ -373,4 +374,4 @@ def generate_pdf(google_url: str, language: str, reise: str, mva: str, discount_
     pdf_data = prepare_quote_data_for_pdf(data)
     
     # Generate PDF from data
-    return generate_pdf_from_data(pdf_data, language, reise, mva, discount_percent)
+    return generate_pdf_from_data(pdf_data, language, reise, mva, discount_percent, currency)

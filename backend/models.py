@@ -126,6 +126,7 @@ class GeneratePDFFromDataRequest(BaseModel):
     reise: Literal["y", "n"] = "n"
     mva: Literal["y", "n"] = "n"
     discount_percent: Literal[0, 10, 15, 20, 25, 30, 40] = Field(default=0, description="Rabatt i prosent")
+    currency: Literal["NOK", "EUR"] = "NOK"
 
 # Customer models
 class CreateCustomerRequest(BaseModel):
